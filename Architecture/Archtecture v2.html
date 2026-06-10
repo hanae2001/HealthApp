@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagramme de Séquence - AppSanté Multi-Spécialités (Avec Remplissage Dossier Médical)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0a0f1e 0%, #0f172a 50%, #1e1b4b 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #e2e8f0;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 25px; }
+        .header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, #38bdf8, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .header p { color: #64748b; font-size: 0.85rem; }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            background: #1e293b;
+            padding: 5px 15px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            border: 1px solid #334155;
+        }
+        .stat-card span { color: #38bdf8; font-weight: bold; }
+        .badge-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        .badge-patient { background: #065f46; color: #a7f3d0; }
+        .badge-reception { background: #b45309; color: #fed7aa; }
+        .badge-medecin { background: #1e40af; color: #bfdbfe; }
+        .badge-admin { background: #7e22ce; color: #e9d5ff; }
+        .badge-systeme { background: #4c1d95; color: #ddd6fe; }
+        .badge-lab { background: #831843; color: #fbcfe8; }
+
+        .timeline-note {
+            background: #1e293b;
+            border-radius: 20px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+            text-align: center;
+        }
+        .timeline-note h4 { color: #fbbf24; margin-bottom: 10px; font-size: 0.9rem; }
+        .timeline-note p { font-size: 0.75rem; color: #94a3b8; }
+        .timeline-dates {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .date-card {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 10px 15px;
+            text-align: center;
+            flex: 1;
+            min-width: 150px;
+        }
+        .date-card .day { color: #38bdf8; font-weight: bold; font-size: 0.8rem; }
+        .date-card .action { font-size: 0.7rem; color: #cbd5e1; margin-top: 5px; }
+
+        .warning {
+            background: #451a03;
+            border-left: 4px solid #fbbf24;
+            padding: 8px 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            color: #fde68a;
+        }
+        .diagram-container {
+            background: #0f172a;
+            border-radius: 20px;
+            border: 1px solid #334155;
+            overflow-x: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .sequence-diagram { min-width: 1400px; padding: 20px 15px 30px 15px; }
+        .lifelines {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 12px;
+        }
+        .lifeline { text-align: center; flex: 1; }
+        .lifeline-header {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .actor-icon {
+            width: 45px;
+            height: 45px;
+            background: #1e293b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            border: 2px solid;
+        }
+        .patient-icon { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .reception-icon { border-color: #f97316; background: rgba(249, 115, 22, 0.1); }
+        .medecin-icon { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        .admin-icon { border-color: #a855f7; background: rgba(168, 85, 247, 0.1); }
+        .systeme-icon { border-color: #6b7280; background: rgba(107, 114, 128, 0.1); }
+        .lab-icon { border-color: #ec4899; background: rgba(236, 72, 153, 0.1); }
+        .actor-name { font-weight: 700; font-size: 0.8rem; }
+        .actor-role { font-size: 0.6rem; color: #64748b; }
+        .message { margin: 12px 0; display: flex; align-items: center; }
+        .message-label {
+            background: #1e293b;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+        }
+        .message-label strong { color: #38bdf8; }
+        .responsible {
+            background: #0f172a;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.55rem;
+            margin-left: 8px;
+            display: inline-block;
+        }
+        .responsible-patient { color: #10b981; border: 1px solid #10b981; }
+        .responsible-medecin { color: #3b82f6; border: 1px solid #3b82f6; }
+        .responsible-admin { color: #a855f7; border: 1px solid #a855f7; }
+        .responsible-systeme { color: #6b7280; border: 1px solid #6b7280; }
+        .sql-badge {
+            background: #0f172a;
+            color: #818cf8;
+            font-family: monospace;
+            font-size: 0.55rem;
+            margin-left: 6px;
+            padding: 2px 5px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+        .table-badge {
+            background: #1e1b4b;
+            color: #a78bfa;
+            font-family: monospace;
+            font-size: 0.55rem;
+            margin-left: 5px;
+            padding: 2px 5px;
+            border-radius: 8px;
+        }
+        .field-list {
+            font-size: 0.6rem;
+            color: #94a3b8;
+            margin-top: 3px;
+            margin-bottom: 5px;
+            padding-left: 15px;
+            font-family: monospace;
+        }
+        .alt-box {
+            margin: 15px 0;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            background: rgba(30, 41, 59, 0.3);
+            overflow: hidden;
+        }
+        .alt-title {
+            background: #1e293b;
+            padding: 6px 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #94a3b8;
+            border-bottom: 1px solid #334155;
+        }
+        .alt-section { padding: 10px 15px; border-bottom: 1px dashed #334155; }
+        .alt-section:last-child { border-bottom: none; }
+        .alt-condition {
+            font-size: 0.65rem;
+            color: #fbbf24;
+            margin-bottom: 8px;
+            font-family: monospace;
+        }
+        .loop-box {
+            margin: 10px 0 10px 25px;
+            border-left: 2px solid #38bdf8;
+            padding-left: 12px;
+        }
+        .loop-title { font-size: 0.65rem; color: #38bdf8; margin-bottom: 6px; }
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            padding: 15px;
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; }
+        .legend-color { width: 18px; height: 2px; background: #38bdf8; }
+        .legend-color.alt { width: 14px; height: 14px; border: 1px solid #fbbf24; background: transparent; border-radius: 3px; }
+        hr { border-color: #334155; margin: 15px 0; }
+        .note { font-size: 0.65rem; color: #64748b; text-align: center; margin-top: 15px; }
+        .flex-between { display: flex; justify-content: space-between; width: 100%; }
+        .w-35 { width: 35%; text-align: right; padding-right: 12px; }
+        .w-2 { width: 2%; }
+        .w-63 { width: 63%; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🏥 Diagramme de Séquence Complet | AppSanté Multi-Spécialités</h1>
+        <p>✅ 21 tables | ✅ 148 champs | ✅ Remplissage dossier médical par le médecin</p>
+        <div class="stats">
+            <div class="stat-card">📊 <span>21</span> Tables</div>
+            <div class="stat-card">📝 <span>148</span> Champs</div>
+            <div class="stat-card">🟡 Patient</div>
+            <div class="stat-card">🟢 Réceptionniste</div>
+            <div class="stat-card">🔵 Médecin</div>
+            <div class="stat-card">🟠 Admin</div>
+            <div class="stat-card">🤖 Système</div>
+            <div class="stat-card">🧪 Laboratoire</div>
+        </div>
+        <div class="badge-container">
+            <span class="badge badge-patient">🟡 Patient</span>
+            <span class="badge badge-reception">🟢 Réceptionniste</span>
+            <span class="badge badge-medecin">🔵 Médecin</span>
+            <span class="badge badge-admin">🟠 Admin</span>
+            <span class="badge badge-systeme">🤖 Système MySQL</span>
+            <span class="badge badge-lab">🧪 Laboratoire</span>
+        </div>
+    </div>
+
+    <!-- TIMELINE : Quand le dossier médical est rempli -->
+    <div class="timeline-note">
+        <h4>📅 متى يتم ملء السجل الطبي؟ (Quand le dossier médical est-il rempli?)</h4>
+        <div class="timeline-dates">
+            <div class="date-card">
+                <div class="day">🗓️ اليوم 0 (Jour 0)</div>
+                <div class="action">🤖 إنشاء تلقائي → سجل طبي <strong>فارغ</strong></div>
+                <div class="action" style="color:#94a3b8">antecedents_medicaux = NULL</div>
+                <div class="action" style="color:#94a3b8">antecedents_dentaires = NULL</div>
+                <div class="action" style="color:#94a3b8">notes_generales = NULL</div>
+            </div>
+            <div class="date-card">
+                <div class="day">🩺 أول استشارة (1ère Consultation)</div>
+                <div class="action">🔵 الطبيب <strong>يملأ</strong> السجل الطبي</div>
+                <div class="action" style="color:#4ade80">✅ antecedents_medicaux = "سكري، ضغط دم"</div>
+                <div class="action" style="color:#4ade80">✅ antecedents_dentaires = "علاج عصب 2020"</div>
+                <div class="action" style="color:#94a3b8">notes_generales = NULL (لا يزال فارغاً)</div>
+            </div>
+            <div class="date-card">
+                <div class="day">🔄 استشارات تالية (Consultations suivantes)</div>
+                <div class="action">🔵 الطبيب <strong>يحدث</strong> السجل الطبي</div>
+                <div class="action" style="color:#fbbf24">🔄 mise à jour antecedents_medicaux</div>
+                <div class="action" style="color:#fbbf24">🔄 mise à jour antecedents_dentaires</div>
+                <div class="action" style="color:#4ade80">✅ notes_generales = "ملاحظات جديدة..."</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="diagram-container">
+        <div class="sequence-diagram">
+            <!-- Lignes de vie -->
+            <div class="lifelines">
+                <div class="lifeline"><div class="lifeline-header"><div class="actor-icon patient-icon">🟡</div><span class="actor-name">Patient</span><span class="actor-role">Acteur principal</span></div></div>
+                <div class="lifeline"><div class="lifeline-header"><div class="actor-icon reception-icon">🟢</div><span class="actor-name">Réceptionniste</span><span class="actor-role">Accueil / Facturation</span></div></div>
+                <div class="lifeline"><div class="lifeline-header"><div class="actor-icon medecin-icon">🔵</div><span class="actor-name">Médecin</span><span class="actor-role">Soins / Prescriptions</span></div></div>
+                <div class="lifeline"><div class="lifeline-header"><div class="actor-icon admin-icon">🟠</div><span class="actor-name">Admin</span><span class="actor-role">Supervision / Gestion</span></div></div>
+                <div class="lifeline"><div class="lifeline-header"><div class="actor-icon systeme-icon">🤖</div><span class="actor-name">Système MySQL</span><span class="actor-role">Base de données</span></div></div>
+                <div class="lifeline"><div class="lifeline-header"><div class="actor-icon lab-icon">🧪</div><span class="actor-name">Laboratoire</span><span class="actor-role">Analyses externes</span></div></div>
+            </div>
+
+            <!-- ==================== PHASE 1 : INSCRIPTION ==================== -->
+            <div class="alt-box">
+                <div class="alt-title">📝 PHASE 1 : INSCRIPTION &amp; RECHERCHE MÉDECIN [Tables: region, ville, secteur, type_etablissement, etablissement, domaine_medical, utilisateur, patient, dossier_medical]</div>
+
+                <!-- 1.1 Création du compte -->
+                <div class="alt-section">
+                    <div class="alt-condition">👤 1.1 Création du compte patient</div>
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">➡️ 1. Créer compte <span class="responsible responsible-patient">🟡 Patient</span></span></div><div class="w-2"></div><div class="w-63"></div></div></div>
+                    <div class="message"><div class="flex-between"><div class="w-35"></div><div class="w-2"></div><div class="w-63"><span class="message-label">🤖 INSERT INTO <strong>utilisateur</strong> <span class="responsible responsible-systeme">🤖 Système</span></span><span class="sql-badge">SQL</span><span class="table-badge">table 7/21</span></div></div></div>
+                    <div class="message"><div class="flex-between"><div class="w-35"></div><div class="w-2"></div><div class="w-63"><span class="message-label">📋 INSERT INTO <strong>patient</strong> <span class="responsible responsible-systeme">🤖 Système</span></span><span class="sql-badge">SQL</span><span class="table-badge">table 8/21</span></div></div></div>
+                    <div class="field-list">⚡ id_dossier(PK) | id_patient(FK) | date_creation | antecedents_medicaux = <strong style="color:#f87171">NULL (فارغ)</strong> | antecedents_dentaires = <strong style="color:#f87171">NULL (فارغ)</strong> | notes_generales = <strong style="color:#f87171">NULL (فارغ)</strong></div>
+                    <div class="message"><div class="flex-between"><div class="w-35"></div><div class="w-2"></div><div class="w-63"><span class="message-label">⚡ [AUTO-TRIGGER] INSERT INTO <strong>dossier_medical</strong> (id_patient, date_creation) <span class="responsible responsible-systeme">⚡ Trigger automatique</span></span><span class="table-badge">table 12/21 (DOSSIER VIDE)</span></div></div></div>
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">✅ Compte actif + Dossier médical <strong style="color:#f87171">VIDE</strong> créé</span></div><div class="w-2"></div><div class="w-63"></div></div></div>
+                </div>
+
+                <!-- 1.2 Recherche du médecin après authentification -->
+                <div class="alt-section">
+                    <div class="alt-condition">🔍 1.2 RECHERCHE DU MÉDECIN après authentification [domaine → région → ville → secteur → établissement → médecin]</div>
+
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🔐 Patient authentifié (login) <span class="responsible responsible-patient">🟡 Patient</span></span></div><div class="w-2"></div><div class="w-63"></div></div></div>
+
+                    <!-- Étape 0 : Domaine médical -->
+                    <div class="message"><div class="flex-between"><div class="w-35"></div><div class="w-2"></div><div class="w-63"><span class="message-label">🩺 Affiche les <strong>domaines médicaux</strong> disponibles <span class="responsible responsible-systeme">🤖 Système</span></span><span class="sql-badge">SQL</span><span class="table-badge">domaine_medical</span></div></div></div>
+                    <div class="field-list">SELECT id_domaine, nom_domaine, icone FROM domaine_medical WHERE actif = TRUE ORDER BY nom_domaine</div>
+
+                    <!-- Étape 1 : Régions -->
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🩺 Patient choisit un domaine <span class="responsible responsible-patient">🟡 Patient</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">🗺️ Affiche les <strong>régions</strong> qui ont des médecins de ce domaine <span class="responsible responsible-systeme">🤖 Système</span></span><span class="sql-badge">SQL</span><span class="table-badge">region</span></div></div></div>
+                    <div class="field-list">SELECT DISTINCT r.id_region, r.nom_region FROM region r JOIN ville v ON v.id_region = r.id_region JOIN secteur s ON s.id_ville = v.id_ville JOIN etablissement e ON e.id_secteur = s.id_secteur JOIN medecin m ON m.id_etablissement = e.id_etablissement WHERE m.id_domaine = ? AND m.actif = TRUE</div>
+
+                    <!-- Étape 2 : Villes -->
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🗺️ Patient choisit une région <span class="responsible responsible-patient">🟡 Patient</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">🏙️ Affiche les <strong>villes</strong> de cette région <span class="responsible responsible-systeme">🤖 Système</span></span><span class="sql-badge">SQL</span><span class="table-badge">ville</span></div></div></div>
+                    <div class="field-list">SELECT DISTINCT v.id_ville, v.nom_ville FROM ville v JOIN secteur s ON s.id_ville = v.id_ville JOIN etablissement e ON e.id_secteur = s.id_secteur JOIN medecin m ON m.id_etablissement = e.id_etablissement WHERE v.id_region = ? AND m.id_domaine = ? AND m.actif = TRUE</div>
+
+                    <!-- Étape 3 : Secteurs -->
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🏙️ Patient choisit une ville <span class="responsible responsible-patient">🟡 Patient</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">📍 Affiche les <strong>secteurs</strong> de cette ville <span class="responsible responsible-systeme">🤖 Système</span></span><span class="sql-badge">SQL</span><span class="table-badge">secteur</span></div></div></div>
+                    <div class="field-list">SELECT s.id_secteur, s.nom_secteur FROM secteur s JOIN etablissement e ON e.id_secteur = s.id_secteur JOIN medecin m ON m.id_etablissement = e.id_etablissement WHERE s.id_ville = ? AND m.id_domaine = ?</div>
+
+                    <!-- Étape 4 : Médecins -->
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">📍 Patient choisit un secteur <span class="responsible responsible-patient">🟡 Patient</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">🩺 Affiche les <strong>médecins</strong> + domaine médical + établissement <span class="responsible responsible-systeme">🤖 Système</span></span><span class="sql-badge">SQL</span><span class="table-badge">medecin · etablissement · domaine_medical</span></div></div></div>
+                    <div class="field-list">SELECT m.id_medecin, m.nom, m.prenom, dm.nom_domaine, e.nom_etablissement, m.tarif_consultation, m.note_moyenne FROM medecin m JOIN etablissement e ON m.id_etablissement = e.id_etablissement JOIN domaine_medical dm ON m.id_domaine = dm.id_domaine WHERE e.id_secteur = ? AND m.id_domaine = ? AND m.actif = TRUE</div>
+
+                    <!-- Étape 5 : Adresse établissement -->
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🩺 Patient choisit un médecin <span class="responsible responsible-patient">🟡 Patient</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">🏥 Affiche l'adresse de l'<strong>établissement</strong> (nom, adresse, téléphone) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="sql-badge">SQL</span><span class="table-badge">etablissement</span></div></div></div>
+                    <div class="field-list">SELECT e.nom_etablissement, e.adresse, e.telephone, e.email FROM etablissement e JOIN medecin m ON m.id_etablissement = e.id_etablissement WHERE m.id_medecin = ?</div>
+
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">✅ Médecin + Établissement sélectionnés → <strong style="color:#4ade80">Prêt pour prise de RDV (Phase 4)</strong></span></div><div class="w-2"></div><div class="w-63"></div></div></div>
+                </div>
+            </div>
+
+            <!-- ==================== PHASE 2 : GESTION DES MÉDECINS ==================== -->
+            <div class="alt-box">
+                <div class="alt-title">🩺 PHASE 2 : GESTION DES MÉDECINS [Tables: medecin, disponibilite]</div>
+                <div class="warning">🔐 Seul l'ADMIN peut créer un compte MÉDECIN</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">👤 2. Créer un médecin <span class="responsible responsible-admin">🟠 Admin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>medecin</strong> (id_utilisateur, id_etablissement, id_domaine, nom, prenom, numero_ordre, tarif_consultation…) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 9/21</span></div></div></div>
+                <div class="loop-box">
+                    <div class="loop-title">🔁 Pour chaque créneau de disponibilité du médecin</div>
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🗓️ Définir disponibilités <span class="responsible responsible-admin">🟠 Admin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>disponibilite</strong> (id_medecin, jour_semaine, heure_debut, heure_fin) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 11/21</span></div></div></div>
+                    <div class="field-list">UNIQUE KEY (id_medecin, jour_semaine, heure_debut) — pas de double créneau</div>
+                </div>
+            </div>
+
+            <!-- ==================== PHASE 3 : GESTION DES RECEPTIONNISTES ==================== -->
+            <div class="alt-box">
+                <div class="alt-title">👩‍💼 PHASE 3 : GESTION DES RÉCEPTIONNISTES [Table: receptionniste]</div>
+                <div class="warning">🔐 Seul l'ADMIN peut créer un compte RÉCEPTIONNISTE</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">👤 3. Créer un réceptionniste <span class="responsible responsible-admin">🟠 Admin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>receptionniste</strong> (id_utilisateur, nom, prenom, telephone) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 10/21</span></div></div></div>
+            </div>
+
+            <!-- ==================== PHASE 4 : RDV ==================== -->
+            <div class="alt-box">
+                <div class="alt-title">📅 PHASE 4 : PRISE &amp; CONFIRMATION DE RENDEZ-VOUS [Table: rendez_vous]</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">📆 4. Prendre RDV <span class="responsible responsible-patient">🟡 Patient OU 🟢 Réceptionniste</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>rendez_vous</strong> (id_patient, id_medecin, date_heure, motif, statut='planifié') <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 13/21</span></div></div></div>
+                <div class="field-list">UNIQUE KEY (id_medecin, date_heure) — conflit de créneau bloqué par la contrainte DB, aucun verrouillage applicatif nécessaire</div>
+                <div class="alt-section"><div class="alt-condition">[ Confirmation par téléphone ]</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">📞 5. Confirmer RDV <span class="responsible responsible-reception">🟢 Réceptionniste</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">UPDATE rendez_vous SET statut = 'confirmé' WHERE id_rdv = ?</span></div></div></div></div>
+                <div class="alt-section"><div class="alt-condition">[ Annulation ]</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">❌ Annuler RDV <span class="responsible responsible-patient">🟡 Patient OU 🟢 Réceptionniste</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">UPDATE rendez_vous SET statut = 'annulé' WHERE id_rdv = ?</span></div></div></div></div>
+            </div>
+
+            <!-- ==================== PHASE 5 : CONSULTATION ==================== -->
+            <div class="alt-box">
+                <div class="alt-title">🩺 PHASE 5 : CONSULTATION MÉDICALE COMPLÈTE</div>
+
+                <!-- 5.1 PREMIÈRE CONSULTATION : REMPLISSAGE DU DOSSIER MÉDICAL -->
+                <div class="alt-section">
+                    <div class="alt-condition">🩺 5.1 PREMIÈRE CONSULTATION - REMPLISSAGE DU DOSSIER MÉDICAL [Table: dossier_medical]</div>
+                    <div class="field-list">📝 Le médecin interroge le patient et remplit : antecedents_medicaux, antecedents_dentaires</div>
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🔵 Médecin interroge le patient sur ses antécédents médicaux</span></div><div class="w-2"></div><div class="w-63"></div></div></div>
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">📝 Médecin remplit <strong>antecedents_medicaux</strong> <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">UPDATE <strong>dossier_medical</strong> SET antecedents_medicaux = 'Diabète type 2, Hypertension' WHERE id_patient = ?</span></div></div></div>
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">📝 Médecin remplit <strong>antecedents_dentaires</strong> <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">UPDATE <strong>dossier_medical</strong> SET antecedents_dentaires = 'Dévitalisation dent 16 en 2020, Extraction dent 38' WHERE id_patient = ?</span></div></div></div>
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">✅ Dossier médical maintenant <strong style="color:#4ade80">REMPLI</strong> (antecedents)</span></div><div class="w-2"></div><div class="w-63"></div></div></div>
+                </div>
+
+                <!-- 5.2 NOTES CLINIQUES -->
+                <div class="alt-section"><div class="alt-condition">📝 5.2 Notes cliniques [Table: note_clinique]</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🔍 Médecin rédige diagnostic <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>note_clinique</strong> (id_dossier, id_medecin, id_rdv, diagnostic, plan_traitement, observations) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 15/21</span></div></div></div></div>
+
+                <!-- 5.3 SOINS -->
+                <div class="alt-section"><div class="alt-condition">💊 5.3 Soins réalisés [Table: soin]</div>
+                <div class="loop-box"><div class="loop-title">🔁 Pour chaque acte médical (réalisé par 🔵 Médecin)</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">💉 Enregistrer soin <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>soin</strong> (id_dossier, id_medecin, id_rdv, type_soin, dent_concernee, cout) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 14/21</span></div></div></div>
+                <div class="field-list">dent_concernee : numérotation FDI (dentaire) | cout NOT NULL DEFAULT 0.00 | id_rdv nullable</div>
+                </div></div>
+
+                <!-- 5.4 ORDONNANCE -->
+                <div class="alt-section"><div class="alt-condition">📄 5.4 Prescription médicaments [Tables: ordonnance, medicament_ordonnance]</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">💊 Créer ordonnance <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>ordonnance</strong> (id_dossier, id_medecin, id_rdv, date_emission, validite_jours) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 16/21</span></div></div></div>
+                <div class="loop-box"><div class="loop-title">🔁 Pour chaque médicament de l'ordonnance</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">💊 Ajouter médicament <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>medicament_ordonnance</strong> (id_ordonnance, nom_medicament, dosage, frequence, duree) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 17/21</span></div></div></div>
+                </div></div>
+
+                <!-- 5.5 RADIOGRAPHIE -->
+                <div class="alt-section"><div class="alt-condition">🩻 5.5 Radiographie [Table: radiographie]</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">📸 Prescrire radiographie <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>radiographie</strong> (id_dossier, id_medecin, type_radio, fichier_url, date_prise, description) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 18/21</span></div></div></div>
+                <div class="field-list">type_radio ENUM: panoramique | rétro-alvéolaire | bitewing | cone_beam</div>
+                </div>
+
+                <!-- 5.6 ANALYSE -->
+                <div class="alt-section"><div class="alt-condition">🔬 5.6 Analyse biologique [Table: analyse]</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🧪 Prescrire analyse <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>analyse</strong> (id_dossier, id_medecin, type_analyse, laboratoire, date_demande) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 19/21</span></div></div></div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">📤 Envoyer échantillon au laboratoire</span></div><div class="w-2"></div><div class="w-63"><span class="message-label">🧪 Laboratoire reçoit et analyse</span></div></div></div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">📥 Résultat retourné</span></div><div class="w-2"></div><div class="w-63"><span class="message-label">UPDATE analyse SET date_resultat = ?, resultat = ?, interpretation = ?, fichier_url = ? WHERE id_analyse = ?</span></div></div></div></div>
+
+                <!-- 5.7 NOTES GÉNÉRALES (consultations suivantes) -->
+                <div class="alt-section">
+                    <div class="alt-condition">📝 5.7 Consultations suivantes - Mise à jour des notes générales [Table: dossier_medical]</div>
+                    <div class="field-list">📝 Le médecin peut ajouter des notes générales à tout moment</div>
+                    <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">📝 Médecin ajoute <strong>notes_generales</strong> <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">UPDATE <strong>dossier_medical</strong> SET notes_generales = 'Patient anxieux, nécessite approche douce...' WHERE id_patient = ?</span></div></div></div>
+                </div>
+
+                <!-- 5.8 FIN CONSULTATION -->
+                <div class="alt-section"><div class="alt-condition">🏁 5.8 Fin de consultation</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">✅ Terminer consultation <span class="responsible responsible-medecin">🔵 Médecin</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">UPDATE rendez_vous SET statut = 'terminé' WHERE id_rdv = ?</span></div></div></div></div>
+            </div>
+
+            <!-- ==================== PHASE 6 : FACTURATION ==================== -->
+            <div class="alt-box">
+                <div class="alt-title">💰 PHASE 6 : FACTURATION &amp; PAIEMENT [Tables: facture, paiement]</div>
+                <div class="warning">⚠️ montant_total est saisi MANUELLEMENT par la réceptionniste — il n'est jamais calculé automatiquement depuis soin.cout</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">🧾 6. Générer facture <span class="responsible responsible-reception">🟢 Réceptionniste</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>facture</strong> (id_patient, id_rdv, numero_facture, date_emission, montant_total) <span class="responsible responsible-systeme">🤖 Système</span></span><span class="table-badge">table 20/21</span></div></div></div>
+                <div class="field-list">numero_facture FORMAT: FAC-YYYY-NNN | id_rdv nullable | montant_paye DEFAULT 0.00 | statut DEFAULT 'en attente'</div>
+                <div class="alt-section"><div class="alt-condition">[ Paiement complet ]</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">💳 Paiement <span class="responsible responsible-patient">🟡 Patient</span></span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO <strong>paiement</strong> (id_facture, montant, mode_paiement) + UPDATE facture SET montant_paye = montant_total, statut='payée'</span><span class="table-badge">table 21/21</span></div></div></div>
+                <div class="field-list">mode_paiement ENUM: espèces | carte | virement | chèque</div>
+                </div>
+                <div class="alt-section"><div class="alt-condition">[ Paiement partiel ou échelonné ]</div>
+                <div class="loop-box"><div class="loop-title">🔁 Pour chaque paiement</div>
+                <div class="message"><div class="flex-between"><div class="w-35"><span class="message-label">💳 Nouveau paiement</span></div><div class="w-2"></div><div class="w-63"><span class="message-label">INSERT INTO paiement + UPDATE facture SET montant_paye = montant_paye + ?, statut = CASE WHEN montant_paye >= montant_total THEN 'payée' ELSE 'partiellement payée' END</span></div></div></div></div></div>
+            </div>
+
+            <!-- Récapitulatif -->
+            <hr>
+            <div style="padding: 20px; background: #1e293b; border-radius: 12px; margin-top: 20px;">
+                <h4 style="color: #38bdf8; margin-bottom: 15px; font-size: 0.9rem;">🗄️ Récapitulatif — 21 Tables par Phase</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
+                    <div style="background:#0f172a; border-radius:10px; padding:12px; border:1px solid #334155;">
+                        <div style="color:#fbbf24; font-size:0.75rem; font-weight:700; margin-bottom:8px;">📝 Phase 1 — Inscription &amp; Recherche</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; font-family:monospace; line-height:1.8;">
+                            1. region<br>2. ville<br>3. secteur<br>4. type_etablissement<br>5. etablissement<br>6. domaine_medical<br>7. utilisateur<br>8. patient<br>12. dossier_medical (trigger)
+                        </div>
+                    </div>
+                    <div style="background:#0f172a; border-radius:10px; padding:12px; border:1px solid #334155;">
+                        <div style="color:#a855f7; font-size:0.75rem; font-weight:700; margin-bottom:8px;">🩺 Phase 2 &amp; 3 — Gestion Comptes</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; font-family:monospace; line-height:1.8;">
+                            9. medecin (Admin only)<br>10. receptionniste (Admin only)<br>11. disponibilite
+                        </div>
+                    </div>
+                    <div style="background:#0f172a; border-radius:10px; padding:12px; border:1px solid #334155;">
+                        <div style="color:#3b82f6; font-size:0.75rem; font-weight:700; margin-bottom:8px;">📅 Phase 4 — Rendez-vous</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; font-family:monospace; line-height:1.8;">
+                            13. rendez_vous<br><span style="color:#4ade80">UNIQUE(id_medecin, date_heure)</span>
+                        </div>
+                    </div>
+                    <div style="background:#0f172a; border-radius:10px; padding:12px; border:1px solid #334155;">
+                        <div style="color:#10b981; font-size:0.75rem; font-weight:700; margin-bottom:8px;">🩺 Phase 5 — Consultation Médicale</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; font-family:monospace; line-height:1.8;">
+                            12. dossier_medical (UPDATE)<br>14. soin<br>15. note_clinique<br>16. ordonnance<br>17. medicament_ordonnance<br>18. radiographie<br>19. analyse
+                        </div>
+                    </div>
+                    <div style="background:#0f172a; border-radius:10px; padding:12px; border:1px solid #334155;">
+                        <div style="color:#ec4899; font-size:0.75rem; font-weight:700; margin-bottom:8px;">💰 Phase 6 — Facturation</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; font-family:monospace; line-height:1.8;">
+                            20. facture (montant_total MANUEL)<br>21. paiement
+                        </div>
+                    </div>
+                    <div style="background:#0f172a; border-radius:10px; padding:12px; border:1px solid #334155;">
+                        <div style="color:#f87171; font-size:0.75rem; font-weight:700; margin-bottom:8px;">⚠️ Décisions clés</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; font-family:monospace; line-height:1.8;">
+                            • dossier_medical créé par TRIGGER<br>• id_rdv nullable sur soin/ordonnance/facture<br>• montant_total saisi manuellement<br>• note_moyenne stockée, non calculée<br>• FetchType.LAZY partout en JPA
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Légende -->
+            <div class="legend">
+                <div class="legend-item"><div class="legend-color"></div><span>Message / Appel</span></div>
+                <div class="legend-item"><div class="legend-color alt"></div><span>Bloc ALT / boucle</span></div>
+                <div class="legend-item"><span style="color:#10b981">●</span> Patient</div>
+                <div class="legend-item"><span style="color:#f97316">●</span> Réceptionniste</div>
+                <div class="legend-item"><span style="color:#3b82f6">●</span> Médecin</div>
+                <div class="legend-item"><span style="color:#a855f7">●</span> Admin</div>
+                <div class="legend-item"><span style="color:#6b7280">●</span> Système MySQL</div>
+                <div class="legend-item"><span style="color:#ec4899">●</span> Laboratoire</div>
+            </div>
+            <p class="note">AppSanté Multi-Spécialités — 21 tables | Schéma MySQL app_dentaire | Spring Boot 4.0.6 + JWT</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

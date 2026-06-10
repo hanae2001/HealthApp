@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Architecture Spring Boot — Analogie Restaurant</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f172a;
+      font-family: 'Segoe UI', sans-serif;
+      color: #e2e8f0;
+      line-height: 1.7;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 70%);
+      padding: 56px 40px 46px;
+      text-align: center;
+      border-bottom: 1px solid #312e81;
+    }
+    .hero h1 { font-size: 2rem; color: #a5b4fc; margin-bottom: 8px; }
+    .hero p  { color: #94a3b8; font-size: 0.95rem; max-width: 680px; margin: 0 auto; }
+    .hero-badge {
+      display: inline-block; margin-top: 16px;
+      background: #1e1b4b; border: 1px solid #4338ca;
+      color: #a5b4fc; font-size: 0.78rem; font-weight: 700;
+      padding: 5px 16px; border-radius: 20px;
+    }
+
+    /* ── NAV ── */
+    .toc {
+      background: #1e293b; border-bottom: 1px solid #334155;
+      padding: 14px 30px;
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    }
+    .toc a {
+      color: #94a3b8; text-decoration: none; font-size: 0.78rem;
+      padding: 4px 12px; border-radius: 20px; border: 1px solid #334155;
+      transition: all .2s;
+    }
+    .toc a:hover { background: #312e81; color: #a5b4fc; border-color: #6d28d9; }
+
+    /* ── MAIN ── */
+    .main { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* ── SECTION ── */
+    .section { margin-bottom: 60px; }
+    .section-title {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 28px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #1e293b;
+    }
+    .section-icon {
+      width: 46px; height: 46px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    .section-title h2 { font-size: 1.3rem; color: #e2e8f0; }
+    .section-title p  { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 14px; overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .card-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 22px;
+      border-bottom: 1px solid #334155;
+    }
+    .card-header h3 { font-size: 1rem; font-weight: 700; }
+    .card-header p  { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+    .card-body { padding: 22px; }
+
+    /* ── GRID ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* ── CODE ── */
+    pre {
+      background: #0a1628; border: 1px solid #1e3a5f;
+      border-radius: 8px; padding: 16px 18px;
+      overflow-x: auto; margin: 10px 0 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.76rem; line-height: 1.7;
+      color: #94a3b8; direction: ltr; text-align: left;
+    }
+    code {
+      background: #1e293b; padding: 1px 6px; border-radius: 4px;
+      font-family: 'Courier New', monospace; font-size: 0.8em; color: #38bdf8;
+    }
+    .kw  { color: #818cf8; font-weight: bold; }
+    .an  { color: #fb923c; }
+    .cl  { color: #38bdf8; }
+    .st  { color: #34d399; }
+    .cm  { color: #475569; font-style: italic; }
+    .nm  { color: #fbbf24; }
+
+    /* ── TEXT ── */
+    p  { color: #cbd5e1; font-size: 0.875rem; margin-bottom: 10px; }
+    h4 { color: #94a3b8; font-size: 0.85rem; margin: 14px 0 6px; font-weight: 600; }
+    ul { padding-left: 18px; margin-bottom: 10px; }
+    li { color: #cbd5e1; font-size: 0.875rem; margin-bottom: 4px; }
+    strong { color: #e2e8f0; }
+
+    /* ── BOXES ── */
+    .box { border-radius: 10px; padding: 14px 18px; margin: 14px 0; font-size: 0.84rem; }
+    .box-blue   { background: #0c2240; border-left: 4px solid #38bdf8; color: #bae6fd; }
+    .box-green  { background: #052e16; border-left: 4px solid #4ade80; color: #bbf7d0; }
+    .box-yellow { background: #2d1a05; border-left: 4px solid #fbbf24; color: #fde68a; }
+    .box-purple { background: #1e0a3c; border-left: 4px solid #c084fc; color: #e9d5ff; }
+    .box-red    { background: #2d0a0a; border-left: 4px solid #f87171; color: #fecaca; }
+    .box-title  { font-weight: 700; margin-bottom: 6px; font-size: 0.9rem; }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 0.68rem; font-weight: 700; margin-left: 8px;
+    }
+    .b-ctrl    { background: #4a1d96; color: #c084fc; border: 1px solid #6d28d9; }
+    .b-service { background: #78350f; color: #fbbf24; border: 1px solid #b45309; }
+    .b-repo    { background: #14532d; color: #4ade80; border: 1px solid #15803d; }
+    .b-entity  { background: #0c2a3e; color: #38bdf8; border: 1px solid #1d4ed8; }
+    .b-dto     { background: #1e3a5f; color: #93c5fd; border: 1px solid #1d4ed8; }
+    .b-security{ background: #312e81; color: #a5b4fc; border: 1px solid #4338ca; }
+
+    /* ── TABLE ── */
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 0.82rem; }
+    th { background: #0f172a; color: #94a3b8; padding: 10px 16px; text-align: left; border-bottom: 1px solid #334155; }
+    td { padding: 10px 16px; border-bottom: 1px solid #1e293b; color: #cbd5e1; vertical-align: top; }
+    tr:hover td { background: #1e293b; }
+
+    /* ── STEP ROW ── */
+    .step-num {
+      display: inline-flex; width: 30px; height: 30px; border-radius: 50%;
+      align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.8rem; flex-shrink: 0;
+      margin-right: 12px;
+    }
+    .step-row { display: flex; align-items: flex-start; margin-bottom: 18px; }
+    .step-row > div { flex: 1; }
+    .step-row strong { display: block; font-size: 0.9rem; margin-bottom: 3px; color: #e2e8f0; }
+    .step-row p { margin-bottom: 0; font-size: 0.83rem; }
+
+    /* ── ANALOGY DIAGRAM ── */
+    .analogy-column {
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .analogy-node {
+      border-radius: 10px; padding: 14px 18px;
+      display: flex; align-items: flex-start; gap: 14px;
+      border: 1px solid transparent;
+      position: relative;
+    }
+    .analogy-node .node-icon {
+      font-size: 1.6rem; flex-shrink: 0; margin-top: 2px;
+    }
+    .analogy-node .node-content h4 {
+      font-size: 0.88rem; font-weight: 700; margin: 0 0 4px;
+      color: #e2e8f0;
+    }
+    .analogy-node .node-content p {
+      font-size: 0.78rem; color: #94a3b8; margin: 0;
+    }
+    .analogy-node .node-content .node-rules {
+      margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .node-rules span {
+      font-size: 0.7rem; padding: 2px 8px; border-radius: 8px;
+      font-weight: 600;
+    }
+    .rule-yes { background: #052e16; color: #4ade80; border: 1px solid #166534; }
+    .rule-no  { background: #3b0a0a; color: #f87171; border: 1px solid #991b1b; }
+
+    .analogy-arrow {
+      text-align: center; padding: 4px 0;
+      color: #334155; font-size: 1.3rem; user-select: none;
+    }
+    .analogy-arrow span { font-size: 0.7rem; color: #475569; display: block; margin-top: -2px; }
+
+    .n-client  { background: #1a2540; border-color: #334155; }
+    .n-ctrl    { background: #1e0a3c; border-color: #4338ca; }
+    .n-service { background: #2c1a00; border-color: #b45309; }
+    .n-repo    { background: #071c10; border-color: #166534; }
+    .n-entity  { background: #091828; border-color: #1d4ed8; }
+    .n-db      { background: #141414; border-color: #374151; }
+
+    /* ── COMPARISON GRID ── */
+    .compare-row {
+      display: grid; grid-template-columns: 1fr 40px 1fr; align-items: center; gap: 0;
+      margin-bottom: 10px;
+    }
+    .compare-left  { background: #1e1b4b; border: 1px solid #3730a3; border-radius: 10px 0 0 10px; padding: 12px 16px; }
+    .compare-mid   { background: #1e293b; border-top: 1px solid #334155; border-bottom: 1px solid #334155; padding: 12px 0; text-align: center; font-size: 1rem; color: #475569; }
+    .compare-right { background: #0c2a3e; border: 1px solid #1d4ed8; border-radius: 0 10px 10px 0; padding: 12px 16px; }
+    .compare-left .clabel  { font-size: 0.72rem; color: #818cf8; font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+    .compare-right .clabel { font-size: 0.72rem; color: #38bdf8; font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+    .compare-left p, .compare-right p { font-size: 0.83rem; color: #e2e8f0; margin: 0; }
+
+    /* ── FLOW DIAGRAM ── */
+    .flow-chain {
+      display: flex; flex-direction: column; gap: 0;
+      background: #0a1628; border: 1px solid #1e3a5f;
+      border-radius: 12px; overflow: hidden;
+      padding: 20px;
+    }
+    .flow-step {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 12px 14px; border-radius: 8px;
+      margin-bottom: 4px;
+    }
+    .flow-step .fs-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.75rem; flex-shrink: 0;
+    }
+    .flow-step .fs-body strong { display: block; font-size: 0.88rem; color: #e2e8f0; margin-bottom: 2px; }
+    .flow-step .fs-body p { font-size: 0.79rem; color: #94a3b8; margin: 0; }
+    .flow-connector { text-align: center; color: #334155; font-size: 1.1rem; padding: 2px 0; }
+
+    .fs-ctrl    { background: #1a0a3c; }
+    .fs-service { background: #1f0f00; }
+    .fs-repo    { background: #041510; }
+    .fs-db      { background: #0d1117; }
+    .fs-entity  { background: #05101e; }
+    .fs-client  { background: #141a24; }
+
+    /* ── ENTITY VS DTO ── */
+    .evd-container {
+      display: grid; grid-template-columns: 1fr 60px 1fr; align-items: start; gap: 0;
+    }
+    .evd-box {
+      border-radius: 12px; padding: 20px; border: 1px solid transparent;
+    }
+    .evd-mid {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 20px 0; gap: 8px; margin-top: 60px;
+    }
+    .evd-arrow { font-size: 1.4rem; color: #475569; }
+    .evd-label { font-size: 0.65rem; color: #64748b; font-weight: 700; text-align: center; }
+    .evd-entity { background: #091828; border-color: #1d4ed8; }
+    .evd-dto    { background: #071c10; border-color: #166534; }
+    .evd-box h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; }
+    .evd-entity h4 { color: #38bdf8; }
+    .evd-dto h4    { color: #4ade80; }
+
+    .field-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 6px; margin-bottom: 5px;
+      font-size: 0.78rem; font-family: 'Courier New', monospace;
+    }
+    .field-internal { background: #3b0a0a; color: #f87171; border: 1px solid #7f1d1d; }
+    .field-public   { background: #052e16; color: #4ade80; border: 1px solid #14532d; }
+    .field-tag {
+      font-size: 0.63rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: auto;
+    }
+    .tag-internal { background: #7f1d1d; color: #fca5a5; }
+    .tag-public   { background: #14532d; color: #86efac; }
+
+    @media (max-width: 768px) {
+      .compare-row { grid-template-columns: 1fr; }
+      .compare-left, .compare-right { border-radius: 10px; }
+      .compare-mid { display: none; }
+      .evd-container { grid-template-columns: 1fr; }
+      .evd-mid { flex-direction: row; margin-top: 0; }
+    }
+
+    /* ── FOOTER ── */
+    .footer { text-align: center; padding: 30px; color: #475569; font-size: 0.76rem; border-top: 1px solid #1e293b; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>🍕 Architecture Spring Boot par l'analogie</h1>
+  <p>Comprendre Controller, Service, Repository, Entity, DTO et l'API en partant d'un restaurant — du client à la base de données, étape par étape.</p>
+  <div class="hero-badge">🏗️ AppDentaire · Spring Boot · Architecture en couches</div>
+</div>
+
+<!-- NAV -->
+<nav class="toc">
+  <a href="#analogie">L'analogie restaurant</a>
+  <a href="#correspondance">Tableau de correspondance</a>
+  <a href="#flux-restaurant">Flux restaurant</a>
+  <a href="#flux-spring">Flux Spring Boot</a>
+  <a href="#entity-dto">Entity vs DTO</a>
+  <a href="#couches">Les 6 couches en détail</a>
+</nav>
+
+<div class="main">
+
+<!-- ══════════════════════════════════
+     ANALOGIE RESTAURANT
+══════════════════════════════════ -->
+<div class="section" id="analogie">
+  <div class="section-title">
+    <div class="section-icon" style="background:#1e1b4b">🍕</div>
+    <div>
+      <h2>L'analogie complète : Restaurant vs Spring Boot</h2>
+      <p>Chaque couche de l'application correspond à un rôle précis dans un restaurant</p>
+    </div>
+  </div>
+
+  <div class="grid-2">
+
+    <!-- Colonne Restaurant -->
+    <div class="card">
+      <div class="card-header" style="background:#2d1a05">
+        <h3 style="color:#fbbf24">🍕 Le Restaurant</h3>
+        <p>Comment fonctionne un restaurant</p>
+      </div>
+      <div class="card-body">
+        <div class="analogy-column">
+
+          <div class="analogy-node n-client">
+            <div class="node-icon">🧑</div>
+            <div class="node-content">
+              <h4>Client (qui commande)</h4>
+              <p>Regarde la carte, passe sa commande, attend sa pizza.</p>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>regarde la carte</span></div>
+
+          <div class="analogy-node n-client" style="border-color:#6d28d9">
+            <div class="node-icon">📋</div>
+            <div class="node-content">
+              <h4>La Carte (Menu)</h4>
+              <p>Liste de ce qu'on peut commander — les plats disponibles et comment les demander.</p>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>passe commande</span></div>
+
+          <div class="analogy-node n-ctrl">
+            <div class="node-icon">📞</div>
+            <div class="node-content">
+              <h4>Le Standardiste / Serveur</h4>
+              <p>Reçoit la commande, vérifie qu'elle est correcte, la transmet au cuisinier, rapporte la pizza au client.</p>
+              <div class="node-rules">
+                <span class="rule-no">❌ Ne cuisine pas</span>
+                <span class="rule-no">❌ Ne va pas au frigo</span>
+                <span class="rule-yes">✅ Transmet &amp; répond</span>
+              </div>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>transmet au cuisinier</span></div>
+
+          <div class="analogy-node n-service">
+            <div class="node-icon">👨‍🍳</div>
+            <div class="node-content">
+              <h4>Le Cuisinier</h4>
+              <p>Connaît les recettes. Décide comment préparer. Envoie le commis chercher les ingrédients.</p>
+              <div class="node-rules">
+                <span class="rule-yes">✅ Logique métier (recettes)</span>
+                <span class="rule-yes">✅ Orchestre les opérations</span>
+              </div>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>demande les ingrédients</span></div>
+
+          <div class="analogy-node n-repo">
+            <div class="node-icon">🧑‍🍳</div>
+            <div class="node-content">
+              <h4>Le Commis</h4>
+              <p>Va au frigo, cherche les ingrédients, les ramène au cuisinier.</p>
+              <div class="node-rules">
+                <span class="rule-yes">✅ Parle avec le frigo</span>
+                <span class="rule-no">❌ Ne cuisine pas</span>
+              </div>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>ouvre le frigo</span></div>
+
+          <div class="analogy-node n-db">
+            <div class="node-icon">🗄️</div>
+            <div class="node-content">
+              <h4>Le Frigo (Stockage)</h4>
+              <p>Contient tous les ingrédients rangés et étiquetés. Pâte, sauce, fromage, champignons…</p>
+            </div>
+          </div>
+          <div class="analogy-arrow">↑<span>retour : ingrédients trouvés</span></div>
+
+          <div class="analogy-node n-entity">
+            <div class="node-icon">🍕</div>
+            <div class="node-content">
+              <h4>La Pizza Brute (produit interne)</h4>
+              <p>Ce que le cuisinier prépare avec les ingrédients. Contient des infos internes (temps de cuisson, ID…).</p>
+              <div class="node-rules">
+                <span class="rule-no">❌ Ne va pas directement au client</span>
+              </div>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>mise dans une boîte</span></div>
+
+          <div class="analogy-node n-repo" style="border-color:#166534">
+            <div class="node-icon">📦</div>
+            <div class="node-content">
+              <h4>Le Carton à emporter (Boîte)</h4>
+              <p>La pizza est emballée proprement pour le client. Contient uniquement ce qu'il a besoin de voir.</p>
+              <div class="node-rules">
+                <span class="rule-yes">✅ Ce que le client reçoit</span>
+                <span class="rule-no">❌ Pas d'infos internes</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Colonne Spring Boot -->
+    <div class="card">
+      <div class="card-header" style="background:#0c2a3e">
+        <h3 style="color:#38bdf8">🏗️ Spring Boot</h3>
+        <p>L'équivalent dans votre application Java</p>
+      </div>
+      <div class="card-body">
+        <div class="analogy-column">
+
+          <div class="analogy-node n-client">
+            <div class="node-icon">🌐</div>
+            <div class="node-content">
+              <h4>Frontend / Navigateur</h4>
+              <p>Application React, mobile ou Postman qui envoie des requêtes HTTP.</p>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>consulte l'API</span></div>
+
+          <div class="analogy-node n-client" style="border-color:#6d28d9">
+            <div class="node-icon">📡</div>
+            <div class="node-content">
+              <h4>L'API (les Endpoints)</h4>
+              <p>Liste des URLs disponibles :<br><code>POST /api/rdv</code> · <code>GET /api/dossier/5</code></p>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>requête HTTP + JWT</span></div>
+
+          <div class="analogy-node n-ctrl">
+            <div class="node-icon">🎯</div>
+            <div class="node-content">
+              <h4>Controller <span class="badge b-ctrl">@RestController</span></h4>
+              <p>Reçoit la requête. Valide avec <code>@Valid</code>. Appelle le Service. Retourne <code>ResponseEntity&lt;DTO&gt;</code>.</p>
+              <div class="node-rules">
+                <span class="rule-no">❌ Aucune logique métier</span>
+                <span class="rule-yes">✅ Codes HTTP corrects</span>
+              </div>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>appel de méthode Java</span></div>
+
+          <div class="analogy-node n-service">
+            <div class="node-icon">⚙️</div>
+            <div class="node-content">
+              <h4>Service <span class="badge b-service">@Service</span></h4>
+              <p>Toute la logique métier. Vérifications, règles, calculs. Annoté <code>@Transactional</code> — tout ou rien.</p>
+              <div class="node-rules">
+                <span class="rule-yes">✅ Toutes les règles ici</span>
+                <span class="rule-yes">✅ @Transactional</span>
+              </div>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>appel de méthode Java</span></div>
+
+          <div class="analogy-node n-repo">
+            <div class="node-icon">💾</div>
+            <div class="node-content">
+              <h4>Repository <span class="badge b-repo">@Repository</span></h4>
+              <p>Interface <code>JpaRepository</code>. Spring génère le SQL depuis le nom des méthodes.</p>
+              <div class="node-rules">
+                <span class="rule-yes">✅ Parle à MySQL</span>
+                <span class="rule-no">❌ Pas de logique</span>
+              </div>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>JDBC / SQL généré</span></div>
+
+          <div class="analogy-node n-db">
+            <div class="node-icon">🐬</div>
+            <div class="node-content">
+              <h4>MySQL — app_dentaire</h4>
+              <p>21 tables · Trigger AFTER INSERT patient · Contraintes FK et UNIQUE.</p>
+            </div>
+          </div>
+          <div class="analogy-arrow">↑<span>retour : lignes de table</span></div>
+
+          <div class="analogy-node n-entity">
+            <div class="node-icon">🗃️</div>
+            <div class="node-content">
+              <h4>Entity <span class="badge b-entity">@Entity</span></h4>
+              <p>Classe Java = table MySQL. Contient toutes les colonnes + relations JPA (<code>@ManyToOne</code>…).</p>
+              <div class="node-rules">
+                <span class="rule-no">❌ Ne sort pas dans l'API</span>
+              </div>
+            </div>
+          </div>
+          <div class="analogy-arrow">↓<span>conversion Entity → DTO</span></div>
+
+          <div class="analogy-node n-repo" style="border-color:#166534">
+            <div class="node-icon">📦</div>
+            <div class="node-content">
+              <h4>DTO — Data Transfer Object <span class="badge b-dto">Response</span></h4>
+              <p>Objet propre envoyé au client. Pas de mot de passe, pas d'ID internes, pas de relations JPA.</p>
+              <div class="node-rules">
+                <span class="rule-yes">✅ Ce que le client voit</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     TABLEAU DE CORRESPONDANCE
+══════════════════════════════════ -->
+<div class="section" id="correspondance">
+  <div class="section-title">
+    <div class="section-icon" style="background:#052e16">📊</div>
+    <div>
+      <h2>Tableau de correspondance</h2>
+      <p>Restaurant ↔ Spring Boot — la traduction terme à terme</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body" style="padding:10px 22px">
+
+      <div class="compare-row">
+        <div class="compare-left"><div class="clabel">Restaurant</div><p>🧑 Client (qui commande)</p></div>
+        <div class="compare-mid">↔</div>
+        <div class="compare-right"><div class="clabel">Spring Boot</div><p>🌐 Frontend · Navigateur · Application mobile</p></div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-left"><div class="clabel">Restaurant</div><p>📋 La Carte (menu)</p></div>
+        <div class="compare-mid">↔</div>
+        <div class="compare-right"><div class="clabel">Spring Boot</div><p>📡 L'API — liste des endpoints disponibles</p></div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-left"><div class="clabel">Restaurant</div><p>📞 Standardiste / Serveur</p></div>
+        <div class="compare-mid">↔</div>
+        <div class="compare-right"><div class="clabel">Spring Boot</div><p>🎯 Controller <code>@RestController</code></p></div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-left"><div class="clabel">Restaurant</div><p>👨‍🍳 Cuisinier (prépare les plats)</p></div>
+        <div class="compare-mid">↔</div>
+        <div class="compare-right"><div class="clabel">Spring Boot</div><p>⚙️ Service <code>@Service @Transactional</code></p></div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-left"><div class="clabel">Restaurant</div><p>🧑‍🍳 Commis (cherche ingrédients)</p></div>
+        <div class="compare-mid">↔</div>
+        <div class="compare-right"><div class="clabel">Spring Boot</div><p>💾 Repository <code>JpaRepository</code></p></div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-left"><div class="clabel">Restaurant</div><p>🗄️ Frigo (stocke les ingrédients)</p></div>
+        <div class="compare-mid">↔</div>
+        <div class="compare-right"><div class="clabel">Spring Boot</div><p>🐬 Base de données MySQL</p></div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-left"><div class="clabel">Restaurant</div><p>🍕 Recette (connaissances du cuisinier)</p></div>
+        <div class="compare-mid">↔</div>
+        <div class="compare-right"><div class="clabel">Spring Boot</div><p>📐 Logique métier dans le Service</p></div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-left"><div class="clabel">Restaurant</div><p>🍕 Pizza brute (produit préparé)</p></div>
+        <div class="compare-mid">↔</div>
+        <div class="compare-right"><div class="clabel">Spring Boot</div><p>🗃️ Entity <code>@Entity</code> — classe Java = table MySQL</p></div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-left"><div class="clabel">Restaurant</div><p>📦 Carton à emporter (boîte propre)</p></div>
+        <div class="compare-mid">↔</div>
+        <div class="compare-right"><div class="clabel">Spring Boot</div><p>📦 DTO — Data Transfer Object</p></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="box box-blue">
+    <div class="box-title">💡 Principe fondamental</div>
+    Chaque couche ne connaît que la couche juste en dessous. Le Controller ne parle jamais au Repository. Le Repository ne contient aucune logique. Tout le raisonnement "si/alors" vit dans le Service — exactement comme un cuisinier qui ne va jamais lui-même au frigo.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     FLUX COMPLET RESTAURANT
+══════════════════════════════════ -->
+<div class="section" id="flux-restaurant">
+  <div class="section-title">
+    <div class="section-icon" style="background:#2d1a05">🔄</div>
+    <div>
+      <h2>Flux complet — Côté restaurant</h2>
+      <p>Ce qui se passe dans chaque rôle, de la commande à la livraison</p>
+    </div>
+  </div>
+
+  <div class="flow-chain">
+
+    <div class="flow-step fs-client">
+      <div class="fs-num" style="background:#1e293b;color:#94a3b8">1</div>
+      <div class="fs-body">
+        <strong>🧑 Client regarde la Carte (API)</strong>
+        <p>"Je vais commander une pizza Margherita" — il choisit dans la liste de ce qui est disponible, puis passe sa commande : <em>POST /commandes {"nom":"Margherita"}</em></p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-ctrl">
+      <div class="fs-num" style="background:#2e1065;color:#c084fc">2</div>
+      <div class="fs-body">
+        <strong>📞 Standardiste (Controller) reçoit la commande</strong>
+        <p>Vérifie que la commande est correcte : "Le nom est-il rempli ? La table existe-t-elle ?" Si c'est invalide → répond immédiatement <em>400 Bad Request</em>. Si c'est valide → transmet au cuisinier. Ne cuisine rien lui-même.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-service">
+      <div class="fs-num" style="background:#78350f;color:#fbbf24">3</div>
+      <div class="fs-body">
+        <strong>👨‍🍳 Cuisinier (Service) applique la recette</strong>
+        <p>Connaît la recette Margherita : pâte + sauce tomate + fromage. Vérifie les règles : "A-t-on assez d'ingrédients ? Est-ce dans nos horaires ?" Demande au commis d'aller chercher au frigo.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-repo">
+      <div class="fs-num" style="background:#14532d;color:#4ade80">4</div>
+      <div class="fs-body">
+        <strong>🧑‍🍳 Commis (Repository) cherche les ingrédients</strong>
+        <p>Va au frigo : "Donne-moi la pâte" (<code>SELECT * FROM ingredient WHERE type='pate'</code>), "Donne-moi le fromage" (<code>WHERE type='fromage'</code>). Rapporte tout au cuisinier. Ne décide rien seul.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-service">
+      <div class="fs-num" style="background:#78350f;color:#fbbf24">5</div>
+      <div class="fs-body">
+        <strong>👨‍🍳 Cuisinier (Service) prépare et assemble</strong>
+        <p>Mélange les ingrédients, cuit la pizza 8 minutes, vérifie la cuisson. Crée la pizza finale (Entity). Si quelque chose rate en cours de route → annule tout, rien n'est servi à moitié cuit.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-ctrl">
+      <div class="fs-num" style="background:#2e1065;color:#c084fc">6</div>
+      <div class="fs-body">
+        <strong>📞 Standardiste (Controller) emballe dans une boîte (DTO)</strong>
+        <p>Prend la pizza brute (Entity). L'emballe dans un carton propre (DTO). Enlève les informations internes (temps de cuisson, ID cuisine…). Prépare une réponse soignée pour le client.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-client">
+      <div class="fs-num" style="background:#1e293b;color:#94a3b8">7</div>
+      <div class="fs-body">
+        <strong>🧑 Client reçoit sa boîte (DTO)</strong>
+        <p>"Voici votre pizza Margherita, bonne dégustation !" — Le client reçoit uniquement ce dont il a besoin : le nom et le prix. Pas les recettes internes, pas les IDs de commande. Code HTTP : <em>200 OK</em> ou <em>201 Created</em>.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     FLUX COMPLET SPRING BOOT
+══════════════════════════════════ -->
+<div class="section" id="flux-spring">
+  <div class="section-title">
+    <div class="section-icon" style="background:#0c2a3e">🏗️</div>
+    <div>
+      <h2>Flux complet — Côté Spring Boot</h2>
+      <p>Exemple concret : <code>POST /api/rdv</code> — un patient prend un rendez-vous</p>
+    </div>
+  </div>
+
+  <div class="flow-chain">
+
+    <div class="flow-step fs-client">
+      <div class="fs-num" style="background:#1e293b;color:#94a3b8">1</div>
+      <div class="fs-body">
+        <strong>🌐 Frontend consulte l'API</strong>
+        <p>Le patient clique "Prendre RDV" → le navigateur envoie : <code>POST /api/rdv</code> avec le body JSON <code>{"idDentiste": 3, "dateHeure": "2026-05-10T14:00"}</code> + le header <code>Authorization: Bearer &lt;token JWT&gt;</code></p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step" style="background:#1a0a2c">
+      <div class="fs-num" style="background:#312e81;color:#a5b4fc">2</div>
+      <div class="fs-body">
+        <strong>🔐 JwtFilter intercepte la requête</strong>
+        <p>Avant même d'arriver au Controller, le filtre lit le header JWT, valide le token, identifie l'utilisateur et injecte son identité dans le contexte Spring. Si token invalide ou absent → <em>401 Unauthorized</em> automatiquement.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-ctrl">
+      <div class="fs-num" style="background:#2e1065;color:#c084fc">3</div>
+      <div class="fs-body">
+        <strong>🎯 Controller reçoit la requête</strong>
+        <p><code>@PostMapping</code> déclenche la méthode. <code>@Valid @RequestBody RdvRequest req</code> valide le DTO : date dans le futur ? ID dentiste non null ? Si invalide → <em>400 Bad Request</em> sans appeler le Service. Si valide → <code>rdvService.prendreRdv(req, user.getUsername())</code>.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-service">
+      <div class="fs-num" style="background:#78350f;color:#fbbf24">4</div>
+      <div class="fs-body">
+        <strong>⚙️ Service — Logique métier</strong>
+        <p><code>@Transactional</code> : tout ce bloc est atomique. Le Service charge le Patient et le Dentiste, vérifie que le créneau n'est pas déjà pris, vérifie la disponibilité hebdomadaire du dentiste. Si une règle est violée → exception → rollback automatique MySQL.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-repo">
+      <div class="fs-num" style="background:#14532d;color:#4ade80">5</div>
+      <div class="fs-body">
+        <strong>💾 Repository — SQL auto-généré</strong>
+        <p><code>rdvRepo.existsByDentisteAndDateHeure(dentiste, dateHeure)</code> → Spring génère <code>SELECT COUNT(*) FROM rendez_vous WHERE id_dentiste=? AND date_heure=?</code>. Si créneau libre → <code>rdvRepo.save(rdv)</code> → <code>INSERT INTO rendez_vous (...)</code>.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-db">
+      <div class="fs-num" style="background:#1e293b;color:#64748b">6</div>
+      <div class="fs-body">
+        <strong>🐬 MySQL exécute et confirme</strong>
+        <p>Exécute l'INSERT. La contrainte UNIQUE <code>(id_dentiste, date_heure)</code> garantit aucun doublon même en cas de race condition. Retourne l'ID généré à Hibernate.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-service">
+      <div class="fs-num" style="background:#78350f;color:#fbbf24">7</div>
+      <div class="fs-body">
+        <strong>⚙️ Service — Fin de la transaction</strong>
+        <p>RDV créé avec succès. Le Service envoie un email de confirmation via <code>mailService.envoyerConfirmationRdv(rdv)</code>. Puis convertit l'Entity en DTO : <code>RdvResponse.builder().idRdv(rdv.getId()).nomDentiste(...).build()</code>. Retourne le DTO au Controller.</p>
+      </div>
+    </div>
+    <div class="flow-connector">↓</div>
+
+    <div class="flow-step fs-ctrl">
+      <div class="fs-num" style="background:#2e1065;color:#c084fc">8</div>
+      <div class="fs-body">
+        <strong>🎯 Controller retourne la réponse HTTP</strong>
+        <p><code>ResponseEntity.status(HttpStatus.CREATED).body(rdvResponse)</code> → le frontend reçoit un JSON propre avec l'ID du RDV, le nom du dentiste, la date — sans aucune donnée sensible interne. Code HTTP : <em>201 Created</em>.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="box box-yellow">
+    <div class="box-title">⚠️ @Transactional — le "tout ou rien" du cuisinier</div>
+    Si le cuisinier lance la pizza en l'air et qu'elle tombe (exception), il ne sert pas une pizza à moitié cuite. <code>@Transactional</code> garantit la même chose en base : si le save du RDV réussit mais que l'email plante après, MySQL annule l'INSERT automatiquement. Pas de données partielles.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     ENTITY vs DTO
+══════════════════════════════════ -->
+<div class="section" id="entity-dto">
+  <div class="section-title">
+    <div class="section-icon" style="background:#091828">📦</div>
+    <div>
+      <h2>Entity vs DTO — La pizza vs le carton</h2>
+      <p>Pourquoi on ne renvoie jamais l'Entity directement au client</p>
+    </div>
+  </div>
+
+  <div class="evd-container">
+
+    <div class="evd-box evd-entity">
+      <h4>🍕 Entity — RendezVous.java</h4>
+      <p style="font-size:0.78rem;color:#64748b;margin-bottom:14px">Ce que Hibernate construit depuis MySQL — usage interne uniquement</p>
+
+      <div class="field-row field-internal">
+        <span>idRdv</span> <span style="color:#64748b">Integer</span>
+        <span class="field-tag tag-internal">interne</span>
+      </div>
+      <div class="field-row field-public">
+        <span>dateHeure</span> <span style="color:#64748b">LocalDateTime</span>
+        <span class="field-tag tag-public">visible</span>
+      </div>
+      <div class="field-row field-public">
+        <span>duree</span> <span style="color:#64748b">Integer</span>
+        <span class="field-tag tag-public">visible</span>
+      </div>
+      <div class="field-row field-public">
+        <span>statut</span> <span style="color:#64748b">Enum</span>
+        <span class="field-tag tag-public">visible</span>
+      </div>
+      <div class="field-row field-internal">
+        <span>patient</span> <span style="color:#64748b">Patient (entity)</span>
+        <span class="field-tag tag-internal">relation JPA</span>
+      </div>
+      <div class="field-row field-internal">
+        <span>dentiste</span> <span style="color:#64748b">Dentiste (entity)</span>
+        <span class="field-tag tag-internal">relation JPA</span>
+      </div>
+      <div class="field-row field-internal">
+        <span>factures</span> <span style="color:#64748b">List&lt;Facture&gt;</span>
+        <span class="field-tag tag-internal">lazy / infini</span>
+      </div>
+      <div class="field-row field-internal">
+        <span>soins</span> <span style="color:#64748b">List&lt;Soin&gt;</span>
+        <span class="field-tag tag-internal">lazy / infini</span>
+      </div>
+
+      <div class="box box-red" style="margin-top:14px">
+        <div class="box-title">❌ Pourquoi pas au client ?</div>
+        Exposer une Entity directement peut causer une boucle infinie JSON (Patient → RendezVous → Patient…), exposer des données sensibles (mot de passe hashé), et trop coupler le client au schéma interne.
+      </div>
+    </div>
+
+    <div class="evd-mid">
+      <div class="evd-arrow">→</div>
+      <div class="evd-label">Service<br>convertit</div>
+    </div>
+
+    <div class="evd-box evd-dto">
+      <h4>📦 DTO — RdvResponse.java</h4>
+      <p style="font-size:0.78rem;color:#64748b;margin-bottom:14px">Ce que le client reçoit — propre, sûr, ciblé</p>
+
+      <div class="field-row field-public">
+        <span>idRdv</span> <span style="color:#64748b">Integer</span>
+        <span class="field-tag tag-public">visible</span>
+      </div>
+      <div class="field-row field-public">
+        <span>dateHeure</span> <span style="color:#64748b">LocalDateTime</span>
+        <span class="field-tag tag-public">visible</span>
+      </div>
+      <div class="field-row field-public">
+        <span>duree</span> <span style="color:#64748b">Integer</span>
+        <span class="field-tag tag-public">visible</span>
+      </div>
+      <div class="field-row field-public">
+        <span>statut</span> <span style="color:#64748b">String</span>
+        <span class="field-tag tag-public">visible</span>
+      </div>
+      <div class="field-row field-public">
+        <span>nomDentiste</span> <span style="color:#64748b">String</span>
+        <span class="field-tag tag-public">extrait de l'entity</span>
+      </div>
+      <div class="field-row field-public">
+        <span>nomPatient</span> <span style="color:#64748b">String</span>
+        <span class="field-tag tag-public">extrait de l'entity</span>
+      </div>
+
+      <div class="box box-green" style="margin-top:14px">
+        <div class="box-title">✅ Avantages du DTO</div>
+        Pas de données sensibles. Pas de boucle infinie. Le client obtient exactement ce dont il a besoin. Si le schéma change en interne, l'API reste stable.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     LES 6 COUCHES EN DÉTAIL
+══════════════════════════════════ -->
+<div class="section" id="couches">
+  <div class="section-title">
+    <div class="section-icon" style="background:#1e1b4b">📚</div>
+    <div>
+      <h2>Les 6 couches en détail</h2>
+      <p>Règles, annotations et responsabilités précises de chaque couche</p>
+    </div>
+  </div>
+
+  <div class="grid-2">
+
+    <div class="card">
+      <div class="card-header" style="background:#2e1065">
+        <h3 style="color:#a5b4fc">🎯 Controller <span class="badge b-ctrl">@RestController</span></h3>
+      </div>
+      <div class="card-body">
+        <p style="font-style:italic;color:#6d28d9;font-weight:600">= Le standardiste du restaurant</p>
+        <ul>
+          <li>Reçoit la requête HTTP (GET, POST, PUT, PATCH, DELETE)</li>
+          <li>Valide le body avec <code>@Valid</code> → retourne 400 si invalide</li>
+          <li>Extrait les paramètres avec <code>@PathVariable</code>, <code>@RequestParam</code></li>
+          <li>Identifie l'utilisateur via <code>@AuthenticationPrincipal</code></li>
+          <li>Retourne un <code>ResponseEntity&lt;DTO&gt;</code> avec le bon code HTTP</li>
+        </ul>
+        <div class="box box-purple">
+          <strong>Fichiers :</strong> <code>AuthController</code>, <code>RendezVousController</code>, <code>ConsultationController</code>, <code>FacturationController</code>, <code>AdminController</code>, <code>GlobalExceptionHandler</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="background:#78350f">
+        <h3 style="color:#fed7aa">⚙️ Service <span class="badge b-service">@Service</span></h3>
+      </div>
+      <div class="card-body">
+        <p style="font-style:italic;color:#b45309;font-weight:600">= Le cuisinier qui connaît les recettes</p>
+        <ul>
+          <li>Porte 100% de la logique métier — vérifications, calculs, règles</li>
+          <li><code>@Transactional</code> : si une étape échoue → tout est annulé</li>
+          <li>Peut appeler plusieurs Repositories dans la même transaction</li>
+          <li>Lance des exceptions si une règle métier est violée</li>
+          <li>Convertit Entity → DTO avant de retourner au Controller</li>
+        </ul>
+        <div class="box box-yellow">
+          <strong>Fichiers :</strong> <code>AuthService</code>, <code>RendezVousService</code>, <code>ConsultationService</code>, <code>FacturationService</code>, <code>AdminService</code>, <code>MailService</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="background:#14532d">
+        <h3 style="color:#4ade80">💾 Repository <span class="badge b-repo">@Repository</span></h3>
+      </div>
+      <div class="card-body">
+        <p style="font-style:italic;color:#166534;font-weight:600">= Le commis qui va au frigo</p>
+        <ul>
+          <li>Interface qui étend <code>JpaRepository&lt;Entity, Id&gt;</code></li>
+          <li>Spring génère le SQL automatiquement depuis le nom des méthodes</li>
+          <li>Requêtes personnalisées avec <code>@Query("SELECT ...")</code> en JPQL</li>
+          <li>Aucune logique métier — uniquement accès aux données</li>
+        </ul>
+        <div class="box box-green">
+          <strong>Fichiers :</strong> <code>UtilisateurRepository</code>, <code>PatientRepository</code>, <code>MedecinRepository</code>, <code>RendezVousRepository</code>, <code>SoinRepository</code>, <code>FactureRepository</code>…
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="background:#0c2a3e">
+        <h3 style="color:#38bdf8">🗃️ Entity <span class="badge b-entity">@Entity</span></h3>
+      </div>
+      <div class="card-body">
+        <p style="font-style:italic;color:#1d4ed8;font-weight:600">= La pizza brute du cuisinier</p>
+        <ul>
+          <li>Chaque classe = une table MySQL</li>
+          <li>Chaque champ = une colonne (<code>@Column(name="...")</code> si snake_case)</li>
+          <li>Relations FK mappées avec <code>@ManyToOne</code>, <code>@OneToMany</code>, <code>@OneToOne</code></li>
+          <li><code>FetchType.LAZY</code> partout — évite les requêtes N+1 catastrophiques</li>
+          <li>Ne sort jamais directement dans les réponses API</li>
+        </ul>
+        <div class="box box-blue">
+          <strong>21 fichiers :</strong> <code>Utilisateur</code>, <code>Patient</code>, <code>Medecin</code>, <code>RendezVous</code>, <code>DossierMedical</code>, <code>Soin</code>, <code>Facture</code>…
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="background:#1e3a5f">
+        <h3 style="color:#93c5fd">📦 DTO <span class="badge b-dto">Request / Response</span></h3>
+      </div>
+      <div class="card-body">
+        <p style="font-style:italic;color:#1d4ed8;font-weight:600">= Le carton à emporter (boîte propre)</p>
+        <ul>
+          <li><strong>Request DTO</strong> : ce que le client envoie (body JSON) — annoté <code>@NotNull</code>, <code>@Email</code>, <code>@Size</code></li>
+          <li><strong>Response DTO</strong> : ce que le serveur retourne — sans données sensibles ni relations JPA infinies</li>
+        </ul>
+<pre><span class="cm">// Request : ce que le client ENVOIE</span>
+<span class="kw">public class</span> <span class="cl">RdvRequest</span> {
+  <span class="an">@NotNull</span>            <span class="kw">private</span> <span class="cl">Integer</span>       idDentiste;
+  <span class="an">@NotNull</span> <span class="an">@Future</span>     <span class="kw">private</span> <span class="cl">LocalDateTime</span> dateHeure;
+  <span class="an">@Min</span>(<span class="nm">15</span>) <span class="an">@Max</span>(<span class="nm">120</span>)  <span class="kw">private</span> <span class="cl">Integer</span>       duree;
+}
+
+<span class="cm">// Response : ce que le client REÇOIT</span>
+<span class="an">@Builder</span>
+<span class="kw">public class</span> <span class="cl">RdvResponse</span> {
+  <span class="kw">private</span> <span class="cl">Integer</span>       idRdv;
+  <span class="kw">private</span> <span class="cl">String</span>        nomDentiste;
+  <span class="kw">private</span> <span class="cl">LocalDateTime</span> dateHeure;
+  <span class="kw">private</span> <span class="cl">String</span>        statut;
+  <span class="cm">// Pas de mot de passe, pas d'Entity imbriquée</span>
+}</pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="background:#3b0a0a">
+        <h3 style="color:#fca5a5">🔐 Security <span class="badge b-security">JWT</span></h3>
+      </div>
+      <div class="card-body">
+        <p style="font-style:italic;color:#b91c1c;font-weight:600">= Le vigile à l'entrée du restaurant</p>
+        <ul>
+          <li><code>JwtUtil</code> : génère et valide les tokens JWT (clé secrète, expiration)</li>
+          <li><code>JwtFilter</code> : intercepte chaque requête, extrait le Bearer token, valide et injecte l'utilisateur dans le contexte</li>
+          <li><code>UserDetailsServiceImpl</code> : charge l'utilisateur depuis MySQL par email</li>
+          <li><code>SecurityConfig</code> : définit quelles URLs sont publiques et quels rôles ont accès à quoi</li>
+        </ul>
+        <div class="box" style="background:#1a0a2c;border-left:4px solid #6d28d9;color:#e9d5ff;margin-top:10px">
+          <strong>Flux :</strong> Requête HTTP → JwtFilter → SecurityContext → Controller
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+</div><!-- fin .main -->
+
+<div class="footer">
+  AppDentaire · Architecture Spring Boot · Analogie Restaurant · Guide par couche
+</div>
+
+</body>
+</html>

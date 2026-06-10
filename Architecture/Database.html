@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <title>قاعدة البيانات – تطبيق طبي متعدد التخصصات</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f172a;
+      font-family: 'Segoe UI', 'Courier New', monospace;
+      color: #e2e8f0;
+      padding: 30px 20px 60px;
+      direction: rtl;
+    }
+    h1 { text-align: center; font-size: 1.6rem; color: #38bdf8; margin-bottom: 4px; }
+    .sub { text-align: center; font-size: 0.82rem; color: #64748b; margin-bottom: 30px; }
+
+    /* ── Navigation rapide ── */
+    .nav {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      justify-content: center; margin-bottom: 30px;
+    }
+    .nav a {
+      padding: 5px 14px; border-radius: 20px; font-size: 0.75rem;
+      text-decoration: none; font-weight: 600; transition: opacity .2s;
+    }
+    .nav a:hover { opacity: .75; }
+
+    /* ── Conteneur général ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+      gap: 22px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ── Carte table ── */
+    .table-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .table-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #334155;
+    }
+    .table-icon { font-size: 1.1rem; }
+    .table-name {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .table-desc {
+      font-size: 0.74rem;
+      color: #64748b;
+      margin-right: auto;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* ── Colonnes ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    thead tr { background: #0f172a; }
+    thead th {
+      padding: 7px 14px;
+      text-align: right;
+      color: #94a3b8;
+      font-weight: 600;
+      font-size: 0.73rem;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #1e293b;
+    }
+    tbody tr { border-bottom: 1px solid #1e293b; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #263548; }
+    tbody td { padding: 7px 14px; }
+
+    .col-name  { color: #e2e8f0; font-family: 'Courier New', monospace; font-weight: 600; }
+    .col-type  { color: #38bdf8; font-family: 'Courier New', monospace; font-size: 0.75rem; }
+    .col-extra { color: #64748b; font-size: 0.72rem; font-family: 'Segoe UI', sans-serif; }
+    .col-desc  { color: #94a3b8; font-family: 'Segoe UI', sans-serif; }
+
+    /* badges */
+    .badge {
+      display: inline-block; padding: 1px 7px; border-radius: 10px;
+      font-size: 0.65rem; font-weight: 700; margin-left: 4px;
+    }
+    .pk  { background: #422006; color: #fb923c; border: 1px solid #9a3412; }
+    .fk  { background: #1e3a5f; color: #60a5fa; border: 1px solid #1d4ed8; }
+    .uk  { background: #14532d; color: #4ade80; border: 1px solid #15803d; }
+    .nn  { background: #1c1917; color: #a3a3a3; }
+
+    /* ── Bloc SQL ── */
+    .sql-block {
+      background: #0a1628;
+      border-top: 1px solid #1e3a5f;
+      padding: 12px 16px;
+      overflow-x: auto;
+    }
+    .sql-block pre {
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      color: #94a3b8;
+      white-space: pre;
+      direction: ltr;
+      text-align: left;
+    }
+    .kw  { color: #818cf8; font-weight: bold; }
+    .tp  { color: #38bdf8; }
+    .cm  { color: #475569; font-style: italic; }
+    .st  { color: #34d399; }
+    .nm  { color: #fbbf24; }
+
+    /* ── Relations ── */
+    .relations {
+      max-width: 1400px;
+      margin: 30px auto 0;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+    .relations h2 {
+      color: #38bdf8; font-size: 1rem; margin-bottom: 16px;
+      border-bottom: 1px solid #334155; padding-bottom: 8px;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .rel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 10px;
+    }
+    .rel-item {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      font-family: 'Courier New', monospace;
+      color: #94a3b8;
+      direction: ltr;
+      text-align: left;
+    }
+    .rel-item span { color: #38bdf8; }
+    .rel-item em   { color: #818cf8; font-style: normal; }
+  </style>
+</head>
+<body>
+
+<h1>قاعدة البيانات MySQL — تطبيق طبي متعدد التخصصات</h1>
+<p class="sub">21 جدول · مفاتيح أساسية وأجنبية · علاقات كاملة</p>
+
+<!-- Navigation -->
+<div class="nav">
+  <a href="#region"         style="background:#1a2e0a;color:#86efac">region</a>
+  <a href="#ville"          style="background:#0f2e1a;color:#86efac">ville</a>
+  <a href="#secteur"        style="background:#1a2e0a;color:#bef264">secteur</a>
+  <a href="#type_etab"      style="background:#1e0a3c;color:#c4b5fd">type_etablissement</a>
+  <a href="#etablissement"  style="background:#1e0a3c;color:#c4b5fd">etablissement</a>
+  <a href="#domaine"        style="background:#0c2a3e;color:#7dd3fc">domaine_medical</a>
+  <a href="#utilisateur"    style="background:#1e3a8a;color:#bfdbfe">utilisateur</a>
+  <a href="#patient"        style="background:#14532d;color:#bbf7d0">patient</a>
+  <a href="#medecin"        style="background:#14532d;color:#bbf7d0">medecin</a>
+  <a href="#receptionniste" style="background:#78350f;color:#fed7aa">receptionniste</a>
+  <a href="#disponibilite"  style="background:#312e81;color:#ddd6fe">disponibilite</a>
+  <a href="#dossier"        style="background:#312e81;color:#ddd6fe">dossier_medical</a>
+  <a href="#rdv"            style="background:#0c4a6e;color:#bae6fd">rendez_vous</a>
+  <a href="#soin"           style="background:#4a1d96;color:#e9d5ff">soin</a>
+  <a href="#note"           style="background:#052e16;color:#86efac">note_clinique</a>
+  <a href="#ordonnance"     style="background:#1e3a5f;color:#93c5fd">ordonnance</a>
+  <a href="#medicament"     style="background:#1e3a5f;color:#93c5fd">medicament_ordonnance</a>
+  <a href="#radio"          style="background:#831843;color:#fbcfe8">radiographie</a>
+  <a href="#analyse"        style="background:#422006;color:#fdba74">analyse</a>
+  <a href="#facture"        style="background:#7f1d1d;color:#fca5a5">facture</a>
+  <a href="#paiement"       style="background:#7f1d1d;color:#fca5a5">paiement</a>
+</div>
+
+<div class="grid">
+
+  <!-- ══════════════════════════════════
+       1. region (NOUVEAU)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="region">
+    <div class="table-header" style="background:#0a2818">
+      <span class="table-icon">🗺️</span>
+      <span class="table-name" style="color:#86efac">region</span>
+      <span class="table-desc">الجهات الـ 12 للمملكة المغربية</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_region<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الجهة</td></tr>
+        <tr><td class="col-name">nom_region<span class="badge uk">UK</span></td><td class="col-type">VARCHAR(100)</td><td class="col-extra">NOT NULL</td><td class="col-desc">اسم الجهة (Casablanca-Settat…)</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> region (
+  id_region  <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  nom_region <span class="tp">VARCHAR(100)</span> <span class="kw">NOT NULL</span>,
+  <span class="kw">UNIQUE KEY</span> unique_region (nom_region)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       2. ville (MODIFIÉ — ajout id_region)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="ville">
+    <div class="table-header" style="background:#0f2e1a">
+      <span class="table-icon">🏙️</span>
+      <span class="table-name" style="color:#86efac">ville</span>
+      <span class="table-desc">المدن</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_ville<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف المدينة</td></tr>
+        <tr><td class="col-name">nom_ville<span class="badge uk">UK</span></td><td class="col-type">VARCHAR(100)</td><td class="col-extra">NOT NULL</td><td class="col-desc">اسم المدينة (Casablanca, Rabat…)</td></tr>
+        <tr><td class="col-name">id_region<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ region</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> ville (
+  id_ville  <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  nom_ville <span class="tp">VARCHAR(100)</span> <span class="kw">NOT NULL</span>,
+  id_region <span class="tp">INT</span>          <span class="kw">NOT NULL</span>,
+  <span class="kw">UNIQUE KEY</span> unique_ville (nom_ville),
+  <span class="kw">FOREIGN KEY</span> (id_region) <span class="kw">REFERENCES</span> region(id_region)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       3. secteur
+  ══════════════════════════════════ -->
+  <div class="table-card" id="secteur">
+    <div class="table-header" style="background:#1a2e0a">
+      <span class="table-icon">📍</span>
+      <span class="table-name" style="color:#bef264">secteur</span>
+      <span class="table-desc">الحي / المنطقة</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_secteur<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الحي</td></tr>
+        <tr><td class="col-name">nom_secteur</td><td class="col-type">VARCHAR(100)</td><td class="col-extra">NOT NULL</td><td class="col-desc">اسم الحي (Agdal, Maarif…)</td></tr>
+        <tr><td class="col-name">id_ville<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ ville</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> secteur (
+  id_secteur  <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  nom_secteur <span class="tp">VARCHAR(100)</span> <span class="kw">NOT NULL</span>,
+  id_ville    <span class="tp">INT</span>          <span class="kw">NOT NULL</span>,
+  <span class="kw">UNIQUE KEY</span> unique_secteur_ville (nom_secteur, id_ville),
+  <span class="kw">FOREIGN KEY</span> (id_ville) <span class="kw">REFERENCES</span> ville(id_ville)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       4. type_etablissement (NOUVEAU)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="type_etab">
+    <div class="table-header" style="background:#1e0a3c">
+      <span class="table-icon">🏷️</span>
+      <span class="table-name" style="color:#c4b5fd">type_etablissement</span>
+      <span class="table-desc">نوع المؤسسة الصحية</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_type<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف النوع</td></tr>
+        <tr><td class="col-name">nom_type<span class="badge uk">UK</span></td><td class="col-type">VARCHAR(50)</td><td class="col-extra">NOT NULL</td><td class="col-desc">cabinet / clinique / hôpital / laboratoire / centre de santé</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> type_etablissement (
+  id_type  <span class="tp">INT</span>         <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  nom_type <span class="tp">VARCHAR(50)</span> <span class="kw">NOT NULL</span>,
+  <span class="kw">UNIQUE KEY</span> unique_type (nom_type)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       5. etablissement (remplace cabinet)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="etablissement">
+    <div class="table-header" style="background:#1e0a3c">
+      <span class="table-icon">🏥</span>
+      <span class="table-name" style="color:#c4b5fd">etablissement</span>
+      <span class="table-desc">المؤسسة الصحية (عيادة، مستشفى، مستوصف…)</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_etablissement<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف المؤسسة</td></tr>
+        <tr><td class="col-name">nom_etablissement</td><td class="col-type">VARCHAR(150)</td><td class="col-extra">NOT NULL</td><td class="col-desc">اسم المؤسسة</td></tr>
+        <tr><td class="col-name">id_type<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ type_etablissement</td></tr>
+        <tr><td class="col-name">id_secteur<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ secteur</td></tr>
+        <tr><td class="col-name">adresse</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">العنوان الكامل</td></tr>
+        <tr><td class="col-name">telephone</td><td class="col-type">VARCHAR(20)</td><td class="col-extra"></td><td class="col-desc">هاتف المؤسسة</td></tr>
+        <tr><td class="col-name">email</td><td class="col-type">VARCHAR(100)</td><td class="col-extra"></td><td class="col-desc">البريد الإلكتروني</td></tr>
+        <tr><td class="col-name">site_web</td><td class="col-type">VARCHAR(255)</td><td class="col-extra"></td><td class="col-desc">الموقع الإلكتروني</td></tr>
+        <tr><td class="col-name">latitude</td><td class="col-type">DECIMAL(10,8)</td><td class="col-extra"></td><td class="col-desc">خط العرض (GPS)</td></tr>
+        <tr><td class="col-name">longitude</td><td class="col-type">DECIMAL(11,8)</td><td class="col-extra"></td><td class="col-desc">خط الطول (GPS)</td></tr>
+        <tr><td class="col-name">actif</td><td class="col-type">BOOLEAN</td><td class="col-extra">DEFAULT TRUE</td><td class="col-desc">المؤسسة نشطة أم لا</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> etablissement (
+  id_etablissement  <span class="tp">INT</span>           <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  nom_etablissement <span class="tp">VARCHAR(150)</span>  <span class="kw">NOT NULL</span>,
+  id_type           <span class="tp">INT</span>           <span class="kw">NOT NULL</span>,
+  id_secteur        <span class="tp">INT</span>           <span class="kw">NOT NULL</span>,
+  adresse           <span class="tp">TEXT</span>,
+  telephone         <span class="tp">VARCHAR(20)</span>,
+  email             <span class="tp">VARCHAR(100)</span>,
+  site_web          <span class="tp">VARCHAR(255)</span>,
+  latitude          <span class="tp">DECIMAL(10,8)</span>,
+  longitude         <span class="tp">DECIMAL(11,8)</span>,
+  actif             <span class="tp">BOOLEAN</span>       <span class="kw">DEFAULT</span> <span class="nm">TRUE</span>,
+  <span class="kw">FOREIGN KEY</span> (id_type)    <span class="kw">REFERENCES</span> type_etablissement(id_type),
+  <span class="kw">FOREIGN KEY</span> (id_secteur) <span class="kw">REFERENCES</span> secteur(id_secteur)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       6. domaine_medical (NOUVEAU)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="domaine">
+    <div class="table-header" style="background:#0c2a3e">
+      <span class="table-icon">🩺</span>
+      <span class="table-name" style="color:#7dd3fc">domaine_medical</span>
+      <span class="table-desc">التخصصات الطبية</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_domaine<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف التخصص</td></tr>
+        <tr><td class="col-name">nom_domaine<span class="badge uk">UK</span></td><td class="col-type">VARCHAR(100)</td><td class="col-extra">NOT NULL</td><td class="col-desc">الاسم (Dentaire, ORL, Cardiologie…)</td></tr>
+        <tr><td class="col-name">icone</td><td class="col-type">VARCHAR(50)</td><td class="col-extra"></td><td class="col-desc">رمز تعبيري للتخصص 🦷👂❤️</td></tr>
+        <tr><td class="col-name">description</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">وصف التخصص</td></tr>
+        <tr><td class="col-name">actif</td><td class="col-type">BOOLEAN</td><td class="col-extra">DEFAULT TRUE</td><td class="col-desc">مفعّل أم لا</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> domaine_medical (
+  id_domaine  <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  nom_domaine <span class="tp">VARCHAR(100)</span> <span class="kw">NOT NULL</span>,
+  icone       <span class="tp">VARCHAR(50)</span>,
+  description <span class="tp">TEXT</span>,
+  actif       <span class="tp">BOOLEAN</span>      <span class="kw">DEFAULT</span> <span class="nm">TRUE</span>,
+  <span class="kw">UNIQUE KEY</span> unique_domaine (nom_domaine)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       7. utilisateur (MODIFIÉ — role ENUM)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="utilisateur">
+    <div class="table-header" style="background:#0f2a4a">
+      <span class="table-icon">🔐</span>
+      <span class="table-name" style="color:#60a5fa">utilisateur</span>
+      <span class="table-desc">المصادقة والصلاحيات</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="col-name">id_utilisateur<span class="badge pk">PK</span></td>
+          <td class="col-type">INT</td>
+          <td class="col-extra">AUTO_INCREMENT</td>
+          <td class="col-desc">معرّف فريد</td>
+        </tr>
+        <tr>
+          <td class="col-name">email<span class="badge uk">UK</span></td>
+          <td class="col-type">VARCHAR(100)</td>
+          <td class="col-extra">NOT NULL</td>
+          <td class="col-desc">البريد الإلكتروني</td>
+        </tr>
+        <tr>
+          <td class="col-name">mot_de_passe</td>
+          <td class="col-type">VARCHAR(255)</td>
+          <td class="col-extra">NOT NULL</td>
+          <td class="col-desc">كلمة المرور (مشفرة bcrypt)</td>
+        </tr>
+        <tr>
+          <td class="col-name">role</td>
+          <td class="col-type">ENUM</td>
+          <td class="col-extra">NOT NULL</td>
+          <td class="col-desc">patient / medecin / receptionniste / admin</td>
+        </tr>
+        <tr>
+          <td class="col-name">actif</td>
+          <td class="col-type">BOOLEAN</td>
+          <td class="col-extra">DEFAULT TRUE</td>
+          <td class="col-desc">الحساب مفعّل أم لا</td>
+        </tr>
+        <tr>
+          <td class="col-name">date_creation</td>
+          <td class="col-type">TIMESTAMP</td>
+          <td class="col-extra">DEFAULT NOW()</td>
+          <td class="col-desc">تاريخ الإنشاء</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> utilisateur (
+  id_utilisateur <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  email          <span class="tp">VARCHAR(100)</span> <span class="kw">UNIQUE NOT NULL</span>,
+  mot_de_passe   <span class="tp">VARCHAR(255)</span> <span class="kw">NOT NULL</span>,
+  role           <span class="tp">ENUM</span>(<span class="st">'patient'</span>,<span class="st">'medecin'</span>,<span class="st">'receptionniste'</span>,<span class="st">'admin'</span>) <span class="kw">NOT NULL</span>,
+  actif          <span class="tp">BOOLEAN</span>      <span class="kw">DEFAULT</span> <span class="nm">TRUE</span>,
+  date_creation  <span class="tp">TIMESTAMP</span>    <span class="kw">DEFAULT</span> CURRENT_TIMESTAMP
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       8. patient
+  ══════════════════════════════════ -->
+  <div class="table-card" id="patient">
+    <div class="table-header" style="background:#0a2818">
+      <span class="table-icon">🧑</span>
+      <span class="table-name" style="color:#4ade80">patient</span>
+      <span class="table-desc">معلومات المريض</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_patient<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف المريض</td></tr>
+        <tr><td class="col-name">id_utilisateur<span class="badge fk">FK</span><span class="badge uk">UK</span></td><td class="col-type">INT</td><td class="col-extra">NULL</td><td class="col-desc">→ utilisateur</td></tr>
+        <tr><td class="col-name">nom</td><td class="col-type">VARCHAR(50)</td><td class="col-extra">NOT NULL</td><td class="col-desc">اللقب</td></tr>
+        <tr><td class="col-name">prenom</td><td class="col-type">VARCHAR(50)</td><td class="col-extra">NOT NULL</td><td class="col-desc">الاسم</td></tr>
+        <tr><td class="col-name">email</td><td class="col-type">VARCHAR(100)</td><td class="col-extra"></td><td class="col-desc">البريد (تذكيرات المواعيد)</td></tr>
+        <tr><td class="col-name">date_naissance</td><td class="col-type">DATE</td><td class="col-extra"></td><td class="col-desc">تاريخ الميلاد</td></tr>
+        <tr><td class="col-name">telephone</td><td class="col-type">VARCHAR(20)</td><td class="col-extra"></td><td class="col-desc">رقم الهاتف</td></tr>
+        <tr><td class="col-name">adresse</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">العنوان</td></tr>
+        <tr><td class="col-name">groupe_sanguin</td><td class="col-type">VARCHAR(5)</td><td class="col-extra"></td><td class="col-desc">فصيلة الدم</td></tr>
+        <tr><td class="col-name">allergies</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">الحساسيات المعروفة</td></tr>
+        <tr><td class="col-name">date_inscription</td><td class="col-type">DATE</td><td class="col-extra">DEFAULT NOW()</td><td class="col-desc">تاريخ التسجيل</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> patient (
+  id_patient       <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_utilisateur   <span class="tp">INT</span>          <span class="kw">UNIQUE</span>,
+  nom              <span class="tp">VARCHAR(50)</span>  <span class="kw">NOT NULL</span>,
+  prenom           <span class="tp">VARCHAR(50)</span>  <span class="kw">NOT NULL</span>,
+  email            <span class="tp">VARCHAR(100)</span>,
+  date_naissance   <span class="tp">DATE</span>,
+  telephone        <span class="tp">VARCHAR(20)</span>,
+  adresse          <span class="tp">TEXT</span>,
+  groupe_sanguin   <span class="tp">VARCHAR(5)</span>,
+  allergies        <span class="tp">TEXT</span>,
+  date_inscription <span class="tp">DATE</span>         <span class="kw">DEFAULT</span> (CURRENT_DATE),
+  <span class="kw">FOREIGN KEY</span> (id_utilisateur) <span class="kw">REFERENCES</span> utilisateur(id_utilisateur)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       9. medecin (remplace dentiste)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="medecin">
+    <div class="table-header" style="background:#0a2818">
+      <span class="table-icon">👨‍⚕️</span>
+      <span class="table-name" style="color:#34d399">medecin</span>
+      <span class="table-desc">معلومات الطبيب (جميع التخصصات)</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_medecin<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الطبيب</td></tr>
+        <tr><td class="col-name">id_utilisateur<span class="badge fk">FK</span><span class="badge uk">UK</span></td><td class="col-type">INT</td><td class="col-extra"></td><td class="col-desc">→ utilisateur</td></tr>
+        <tr><td class="col-name">id_etablissement<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NULL</td><td class="col-desc">→ etablissement</td></tr>
+        <tr><td class="col-name">id_domaine<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ domaine_medical</td></tr>
+        <tr><td class="col-name">nom</td><td class="col-type">VARCHAR(50)</td><td class="col-extra">NOT NULL</td><td class="col-desc">اللقب</td></tr>
+        <tr><td class="col-name">prenom</td><td class="col-type">VARCHAR(50)</td><td class="col-extra">NOT NULL</td><td class="col-desc">الاسم</td></tr>
+        <tr><td class="col-name">telephone</td><td class="col-type">VARCHAR(20)</td><td class="col-extra"></td><td class="col-desc">رقم الهاتف</td></tr>
+        <tr><td class="col-name">email</td><td class="col-type">VARCHAR(100)</td><td class="col-extra"></td><td class="col-desc">البريد الإلكتروني</td></tr>
+        <tr><td class="col-name">numero_ordre<span class="badge uk">UK</span></td><td class="col-type">VARCHAR(50)</td><td class="col-extra">UNIQUE</td><td class="col-desc">رقم هيئة الأطباء</td></tr>
+        <tr><td class="col-name">experience_ans</td><td class="col-type">INT</td><td class="col-extra"></td><td class="col-desc">سنوات الخبرة</td></tr>
+        <tr><td class="col-name">tarif_consultation</td><td class="col-type">DECIMAL(10,2)</td><td class="col-extra"></td><td class="col-desc">تكلفة الاستشارة</td></tr>
+        <tr><td class="col-name">note_moyenne</td><td class="col-type">DECIMAL(2,1)</td><td class="col-extra">DEFAULT 0</td><td class="col-desc">متوسط التقييم (0-5)</td></tr>
+        <tr><td class="col-name">nb_avis</td><td class="col-type">INT</td><td class="col-extra">DEFAULT 0</td><td class="col-desc">عدد التقييمات</td></tr>
+        <tr><td class="col-name">actif</td><td class="col-type">BOOLEAN</td><td class="col-extra">DEFAULT TRUE</td><td class="col-desc">الحساب مفعّل أم لا</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> medecin (
+  id_medecin         <span class="tp">INT</span>           <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_utilisateur     <span class="tp">INT</span>           <span class="kw">UNIQUE</span>,
+  id_etablissement   <span class="tp">INT</span>           <span class="nm">NULL</span>,
+  id_domaine         <span class="tp">INT</span>           <span class="kw">NOT NULL</span>,
+  nom                <span class="tp">VARCHAR(50)</span>   <span class="kw">NOT NULL</span>,
+  prenom             <span class="tp">VARCHAR(50)</span>   <span class="kw">NOT NULL</span>,
+  telephone          <span class="tp">VARCHAR(20)</span>,
+  email              <span class="tp">VARCHAR(100)</span>,
+  numero_ordre       <span class="tp">VARCHAR(50)</span>   <span class="kw">UNIQUE</span>,
+  experience_ans     <span class="tp">INT</span>,
+  tarif_consultation <span class="tp">DECIMAL(10,2)</span>,
+  note_moyenne       <span class="tp">DECIMAL(2,1)</span>  <span class="kw">DEFAULT</span> <span class="nm">0</span>,
+  nb_avis            <span class="tp">INT</span>           <span class="kw">DEFAULT</span> <span class="nm">0</span>,
+  actif              <span class="tp">BOOLEAN</span>       <span class="kw">DEFAULT</span> <span class="nm">TRUE</span>,
+  <span class="kw">FOREIGN KEY</span> (id_utilisateur)   <span class="kw">REFERENCES</span> utilisateur(id_utilisateur),
+  <span class="kw">FOREIGN KEY</span> (id_etablissement) <span class="kw">REFERENCES</span> etablissement(id_etablissement),
+  <span class="kw">FOREIGN KEY</span> (id_domaine)       <span class="kw">REFERENCES</span> domaine_medical(id_domaine)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       10. receptionniste
+  ══════════════════════════════════ -->
+  <div class="table-card" id="receptionniste">
+    <div class="table-header" style="background:#2d1a05">
+      <span class="table-icon">👩‍💼</span>
+      <span class="table-name" style="color:#fb923c">receptionniste</span>
+      <span class="table-desc">موظف الاستقبال</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_receptionniste<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف موظف الاستقبال</td></tr>
+        <tr><td class="col-name">id_utilisateur<span class="badge fk">FK</span><span class="badge uk">UK</span></td><td class="col-type">INT</td><td class="col-extra"></td><td class="col-desc">→ utilisateur</td></tr>
+        <tr><td class="col-name">nom</td><td class="col-type">VARCHAR(50)</td><td class="col-extra">NOT NULL</td><td class="col-desc">اللقب</td></tr>
+        <tr><td class="col-name">prenom</td><td class="col-type">VARCHAR(50)</td><td class="col-extra">NOT NULL</td><td class="col-desc">الاسم</td></tr>
+        <tr><td class="col-name">telephone</td><td class="col-type">VARCHAR(20)</td><td class="col-extra"></td><td class="col-desc">رقم الهاتف</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> receptionniste (
+  id_receptionniste <span class="tp">INT</span>         <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_utilisateur    <span class="tp">INT</span>         <span class="kw">UNIQUE</span>,
+  nom               <span class="tp">VARCHAR(50)</span> <span class="kw">NOT NULL</span>,
+  prenom            <span class="tp">VARCHAR(50)</span> <span class="kw">NOT NULL</span>,
+  telephone         <span class="tp">VARCHAR(20)</span>,
+  <span class="kw">FOREIGN KEY</span> (id_utilisateur) <span class="kw">REFERENCES</span> utilisateur(id_utilisateur)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       11. disponibilite (MODIFIÉ — id_medecin)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="disponibilite">
+    <div class="table-header" style="background:#1e1b4b">
+      <span class="table-icon">🗓️</span>
+      <span class="table-name" style="color:#a5b4fc">disponibilite</span>
+      <span class="table-desc">أوقات عمل الطبيب الأسبوعية</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_dispo<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الفترة</td></tr>
+        <tr><td class="col-name">id_medecin<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ medecin</td></tr>
+        <tr><td class="col-name">jour_semaine</td><td class="col-type">ENUM</td><td class="col-extra">NOT NULL</td><td class="col-desc">lundi / mardi / mercredi / jeudi / vendredi / samedi</td></tr>
+        <tr><td class="col-name">heure_debut</td><td class="col-type">TIME</td><td class="col-extra">NOT NULL</td><td class="col-desc">وقت البداية</td></tr>
+        <tr><td class="col-name">heure_fin</td><td class="col-type">TIME</td><td class="col-extra">NOT NULL</td><td class="col-desc">وقت النهاية</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> disponibilite (
+  id_dispo     <span class="tp">INT</span>  <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_medecin   <span class="tp">INT</span>  <span class="kw">NOT NULL</span>,
+  jour_semaine <span class="tp">ENUM</span>(<span class="st">'lundi'</span>,<span class="st">'mardi'</span>,<span class="st">'mercredi'</span>,
+               <span class="st">'jeudi'</span>,<span class="st">'vendredi'</span>,<span class="st">'samedi'</span>) <span class="kw">NOT NULL</span>,
+  heure_debut  <span class="tp">TIME</span> <span class="kw">NOT NULL</span>,
+  heure_fin    <span class="tp">TIME</span> <span class="kw">NOT NULL</span>,
+  <span class="kw">UNIQUE KEY</span> unique_dispo (id_medecin, jour_semaine, heure_debut),
+  <span class="kw">FOREIGN KEY</span> (id_medecin) <span class="kw">REFERENCES</span> medecin(id_medecin)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       12. dossier_medical
+  ══════════════════════════════════ -->
+  <div class="table-card" id="dossier">
+    <div class="table-header" style="background:#1e1b4b">
+      <span class="table-icon">📋</span>
+      <span class="table-name" style="color:#a5b4fc">dossier_medical</span>
+      <span class="table-desc">الملف الطبي للمريض</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_dossier<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الملف</td></tr>
+        <tr><td class="col-name">id_patient<span class="badge fk">FK</span><span class="badge uk">UK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ patient (ملف واحد لكل مريض)</td></tr>
+        <tr><td class="col-name">date_creation</td><td class="col-type">DATE</td><td class="col-extra">DEFAULT NOW()</td><td class="col-desc">تاريخ فتح الملف (تلقائي عند التسجيل)</td></tr>
+        <tr><td class="col-name">antecedents_medicaux</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">الأمراض المزمنة، العمليات</td></tr>
+        <tr><td class="col-name">antecedents_dentaires</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">الخلفية السنية</td></tr>
+        <tr><td class="col-name">notes_generales</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">ملاحظات عامة</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> dossier_medical (
+  id_dossier            <span class="tp">INT</span>  <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_patient            <span class="tp">INT</span>  <span class="kw">NOT NULL</span>,
+  date_creation         <span class="tp">DATE</span> <span class="kw">DEFAULT</span> (CURRENT_DATE),
+  antecedents_medicaux  <span class="tp">TEXT</span>,
+  antecedents_dentaires <span class="tp">TEXT</span>,
+  notes_generales       <span class="tp">TEXT</span>,
+  <span class="kw">UNIQUE KEY</span> unique_dossier_patient (id_patient),
+  <span class="kw">FOREIGN KEY</span> (id_patient) <span class="kw">REFERENCES</span> patient(id_patient)
+);
+<span class="cm">-- Trigger : crée automatiquement un dossier vide à l'inscription</span>
+<span class="kw">CREATE TRIGGER</span> after_patient_insert
+<span class="kw">AFTER INSERT ON</span> patient <span class="kw">FOR EACH ROW</span>
+  <span class="kw">INSERT INTO</span> dossier_medical (id_patient, date_creation)
+  <span class="kw">VALUES</span> (NEW.id_patient, CURRENT_DATE);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       13. rendez_vous (MODIFIÉ — id_medecin)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="rdv">
+    <div class="table-header" style="background:#0c2a3e">
+      <span class="table-icon">📅</span>
+      <span class="table-name" style="color:#38bdf8">rendez_vous</span>
+      <span class="table-desc">المواعيد</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_rdv<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الموعد</td></tr>
+        <tr><td class="col-name">id_patient<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ patient</td></tr>
+        <tr><td class="col-name">id_medecin<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ medecin</td></tr>
+        <tr><td class="col-name">date_heure</td><td class="col-type">DATETIME</td><td class="col-extra">NOT NULL</td><td class="col-desc">تاريخ ووقت الموعد</td></tr>
+        <tr><td class="col-name">duree</td><td class="col-type">INT</td><td class="col-extra">DEFAULT 30</td><td class="col-desc">المدة بالدقائق</td></tr>
+        <tr><td class="col-name">motif</td><td class="col-type">VARCHAR(255)</td><td class="col-extra"></td><td class="col-desc">سبب الزيارة</td></tr>
+        <tr><td class="col-name">statut</td><td class="col-type">ENUM</td><td class="col-extra">DEFAULT 'planifié'</td><td class="col-desc">planifié / confirmé / annulé / terminé</td></tr>
+        <tr><td class="col-name">notes</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">ملاحظات الموعد</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> rendez_vous (
+  id_rdv      <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_patient  <span class="tp">INT</span>          <span class="kw">NOT NULL</span>,
+  id_medecin  <span class="tp">INT</span>          <span class="kw">NOT NULL</span>,
+  date_heure  <span class="tp">DATETIME</span>     <span class="kw">NOT NULL</span>,
+  duree       <span class="tp">INT</span>          <span class="kw">DEFAULT</span> <span class="nm">30</span>,
+  motif       <span class="tp">VARCHAR(255)</span>,
+  statut      <span class="tp">ENUM</span>(<span class="st">'planifié'</span>,<span class="st">'confirmé'</span>,<span class="st">'annulé'</span>,<span class="st">'terminé'</span>)
+              <span class="kw">DEFAULT</span> <span class="st">'planifié'</span>,
+  notes       <span class="tp">TEXT</span>,
+  <span class="kw">UNIQUE KEY</span> unique_creneau (id_medecin, date_heure),
+  <span class="kw">FOREIGN KEY</span> (id_patient) <span class="kw">REFERENCES</span> patient(id_patient),
+  <span class="kw">FOREIGN KEY</span> (id_medecin) <span class="kw">REFERENCES</span> medecin(id_medecin)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       14. soin (MODIFIÉ — id_medecin)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="soin">
+    <div class="table-header" style="background:#1e0a3c">
+      <span class="table-icon">💊</span>
+      <span class="table-name" style="color:#c084fc">soin</span>
+      <span class="table-desc">العلاجات المنجزة</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_soin<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف العلاج</td></tr>
+        <tr><td class="col-name">id_dossier<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ dossier_medical</td></tr>
+        <tr><td class="col-name">id_medecin<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ medecin</td></tr>
+        <tr><td class="col-name">id_rdv<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NULL</td><td class="col-desc">→ rendez_vous</td></tr>
+        <tr><td class="col-name">type_soin</td><td class="col-type">VARCHAR(100)</td><td class="col-extra">NOT NULL</td><td class="col-desc">تنظيف / حشو / خلع / تقويم...</td></tr>
+        <tr><td class="col-name">dent_concernee</td><td class="col-type">VARCHAR(20)</td><td class="col-extra"></td><td class="col-desc">رقم السن (نظام FDI — طب الأسنان)</td></tr>
+        <tr><td class="col-name">date_soin</td><td class="col-type">DATE</td><td class="col-extra">NOT NULL</td><td class="col-desc">تاريخ العلاج</td></tr>
+        <tr><td class="col-name">cout</td><td class="col-type">DECIMAL(10,2)</td><td class="col-extra">NOT NULL DEFAULT 0</td><td class="col-desc">تكلفة العلاج</td></tr>
+        <tr><td class="col-name">statut</td><td class="col-type">ENUM</td><td class="col-extra">DEFAULT 'terminé'</td><td class="col-desc">en cours / terminé</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> soin (
+  id_soin        <span class="tp">INT</span>           <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_dossier     <span class="tp">INT</span>           <span class="kw">NOT NULL</span>,
+  id_medecin     <span class="tp">INT</span>           <span class="kw">NOT NULL</span>,
+  id_rdv         <span class="tp">INT</span>,
+  type_soin      <span class="tp">VARCHAR(100)</span>  <span class="kw">NOT NULL</span>,
+  dent_concernee <span class="tp">VARCHAR(20)</span>,
+  date_soin      <span class="tp">DATE</span>          <span class="kw">NOT NULL</span>,
+  cout           <span class="tp">DECIMAL(10,2)</span> <span class="kw">NOT NULL DEFAULT</span> <span class="nm">0.00</span>,
+  statut         <span class="tp">ENUM</span>(<span class="st">'en cours'</span>,<span class="st">'terminé'</span>) <span class="kw">DEFAULT</span> <span class="st">'terminé'</span>,
+  <span class="kw">FOREIGN KEY</span> (id_dossier) <span class="kw">REFERENCES</span> dossier_medical(id_dossier),
+  <span class="kw">FOREIGN KEY</span> (id_medecin) <span class="kw">REFERENCES</span> medecin(id_medecin),
+  <span class="kw">FOREIGN KEY</span> (id_rdv)     <span class="kw">REFERENCES</span> rendez_vous(id_rdv)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       15. note_clinique (MODIFIÉ — id_medecin)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="note">
+    <div class="table-header" style="background:#0a2818">
+      <span class="table-icon">🗒️</span>
+      <span class="table-name" style="color:#86efac">note_clinique</span>
+      <span class="table-desc">الملاحظات السريرية</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_note<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الملاحظة</td></tr>
+        <tr><td class="col-name">id_dossier<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ dossier_medical</td></tr>
+        <tr><td class="col-name">id_medecin<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ medecin</td></tr>
+        <tr><td class="col-name">id_rdv<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NULL</td><td class="col-desc">→ rendez_vous</td></tr>
+        <tr><td class="col-name">date_note</td><td class="col-type">DATETIME</td><td class="col-extra">DEFAULT NOW()</td><td class="col-desc">تاريخ الملاحظة</td></tr>
+        <tr><td class="col-name">diagnostic</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">التشخيص</td></tr>
+        <tr><td class="col-name">plan_traitement</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">خطة العلاج</td></tr>
+        <tr><td class="col-name">observations</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">ملاحظات سريرية أخرى</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> note_clinique (
+  id_note         <span class="tp">INT</span>      <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_dossier      <span class="tp">INT</span>      <span class="kw">NOT NULL</span>,
+  id_medecin      <span class="tp">INT</span>      <span class="kw">NOT NULL</span>,
+  id_rdv          <span class="tp">INT</span>,
+  date_note       <span class="tp">DATETIME</span> <span class="kw">DEFAULT</span> CURRENT_TIMESTAMP,
+  diagnostic      <span class="tp">TEXT</span>,
+  plan_traitement <span class="tp">TEXT</span>,
+  observations    <span class="tp">TEXT</span>,
+  <span class="kw">FOREIGN KEY</span> (id_dossier) <span class="kw">REFERENCES</span> dossier_medical(id_dossier),
+  <span class="kw">FOREIGN KEY</span> (id_medecin) <span class="kw">REFERENCES</span> medecin(id_medecin),
+  <span class="kw">FOREIGN KEY</span> (id_rdv)     <span class="kw">REFERENCES</span> rendez_vous(id_rdv)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       16. ordonnance (MODIFIÉ — id_medecin)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="ordonnance">
+    <div class="table-header" style="background:#0c2240">
+      <span class="table-icon">📝</span>
+      <span class="table-name" style="color:#93c5fd">ordonnance</span>
+      <span class="table-desc">الوصفات الطبية</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_ordonnance<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الوصفة</td></tr>
+        <tr><td class="col-name">id_dossier<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ dossier_medical</td></tr>
+        <tr><td class="col-name">id_medecin<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ medecin</td></tr>
+        <tr><td class="col-name">id_rdv<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NULL</td><td class="col-desc">→ rendez_vous</td></tr>
+        <tr><td class="col-name">date_emission</td><td class="col-type">DATE</td><td class="col-extra">NOT NULL</td><td class="col-desc">تاريخ إصدار الوصفة</td></tr>
+        <tr><td class="col-name">validite_jours</td><td class="col-type">INT</td><td class="col-extra">DEFAULT 30</td><td class="col-desc">مدة الصلاحية بالأيام</td></tr>
+        <tr><td class="col-name">notes</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">تعليمات إضافية</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> ordonnance (
+  id_ordonnance  <span class="tp">INT</span>  <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_dossier     <span class="tp">INT</span>  <span class="kw">NOT NULL</span>,
+  id_medecin     <span class="tp">INT</span>  <span class="kw">NOT NULL</span>,
+  id_rdv         <span class="tp">INT</span>,
+  date_emission  <span class="tp">DATE</span> <span class="kw">NOT NULL</span>,
+  validite_jours <span class="tp">INT</span>  <span class="kw">DEFAULT</span> <span class="nm">30</span>,
+  notes          <span class="tp">TEXT</span>,
+  <span class="kw">FOREIGN KEY</span> (id_dossier) <span class="kw">REFERENCES</span> dossier_medical(id_dossier),
+  <span class="kw">FOREIGN KEY</span> (id_medecin) <span class="kw">REFERENCES</span> medecin(id_medecin),
+  <span class="kw">FOREIGN KEY</span> (id_rdv)     <span class="kw">REFERENCES</span> rendez_vous(id_rdv)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       17. medicament_ordonnance
+  ══════════════════════════════════ -->
+  <div class="table-card" id="medicament">
+    <div class="table-header" style="background:#0c2240">
+      <span class="table-icon">💉</span>
+      <span class="table-name" style="color:#7dd3fc">medicament_ordonnance</span>
+      <span class="table-desc">أسطر الوصفة (الأدوية)</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف السطر</td></tr>
+        <tr><td class="col-name">id_ordonnance<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ ordonnance</td></tr>
+        <tr><td class="col-name">nom_medicament</td><td class="col-type">VARCHAR(100)</td><td class="col-extra">NOT NULL</td><td class="col-desc">اسم الدواء</td></tr>
+        <tr><td class="col-name">dosage</td><td class="col-type">VARCHAR(100)</td><td class="col-extra"></td><td class="col-desc">الجرعة (500mg, 1g...)</td></tr>
+        <tr><td class="col-name">frequence</td><td class="col-type">VARCHAR(100)</td><td class="col-extra"></td><td class="col-desc">مرتين يومياً...</td></tr>
+        <tr><td class="col-name">duree</td><td class="col-type">VARCHAR(100)</td><td class="col-extra"></td><td class="col-desc">5 أيام / أسبوع...</td></tr>
+        <tr><td class="col-name">instructions</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">بعد الأكل، قبل النوم...</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> medicament_ordonnance (
+  id             <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_ordonnance  <span class="tp">INT</span>          <span class="kw">NOT NULL</span>,
+  nom_medicament <span class="tp">VARCHAR(100)</span> <span class="kw">NOT NULL</span>,
+  dosage         <span class="tp">VARCHAR(100)</span>,
+  frequence      <span class="tp">VARCHAR(100)</span>,
+  duree          <span class="tp">VARCHAR(100)</span>,
+  instructions   <span class="tp">TEXT</span>,
+  <span class="kw">FOREIGN KEY</span> (id_ordonnance) <span class="kw">REFERENCES</span> ordonnance(id_ordonnance)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       18. radiographie (MODIFIÉ — id_medecin)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="radio">
+    <div class="table-header" style="background:#3b0a23">
+      <span class="table-icon">🩻</span>
+      <span class="table-name" style="color:#f9a8d4">radiographie</span>
+      <span class="table-desc">الأشعة السينية والصور</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_radio<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الصورة</td></tr>
+        <tr><td class="col-name">id_dossier<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ dossier_medical</td></tr>
+        <tr><td class="col-name">id_medecin<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ medecin</td></tr>
+        <tr><td class="col-name">type_radio</td><td class="col-type">ENUM</td><td class="col-extra">NOT NULL</td><td class="col-desc">panoramique / rétro-alvéolaire / bitewing / cone_beam</td></tr>
+        <tr><td class="col-name">fichier_url</td><td class="col-type">VARCHAR(500)</td><td class="col-extra">NOT NULL</td><td class="col-desc">مسار الملف أو رابط S3</td></tr>
+        <tr><td class="col-name">format</td><td class="col-type">VARCHAR(10)</td><td class="col-extra">DEFAULT 'JPEG'</td><td class="col-desc">JPEG / DICOM / PNG</td></tr>
+        <tr><td class="col-name">date_prise</td><td class="col-type">DATE</td><td class="col-extra">NOT NULL</td><td class="col-desc">تاريخ الأخذ</td></tr>
+        <tr><td class="col-name">description</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">ملاحظات الطبيب على الصورة</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> radiographie (
+  id_radio    <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_dossier  <span class="tp">INT</span>          <span class="kw">NOT NULL</span>,
+  id_medecin  <span class="tp">INT</span>          <span class="kw">NOT NULL</span>,
+  type_radio  <span class="tp">ENUM</span>(<span class="st">'panoramique'</span>,<span class="st">'rétro-alvéolaire'</span>,
+               <span class="st">'bitewing'</span>,<span class="st">'cone_beam'</span>) <span class="kw">NOT NULL</span>,
+  fichier_url <span class="tp">VARCHAR(500)</span> <span class="kw">NOT NULL</span>,
+  format      <span class="tp">VARCHAR(10)</span>  <span class="kw">DEFAULT</span> <span class="st">'JPEG'</span>,
+  date_prise  <span class="tp">DATE</span>         <span class="kw">NOT NULL</span>,
+  description <span class="tp">TEXT</span>,
+  <span class="kw">FOREIGN KEY</span> (id_dossier) <span class="kw">REFERENCES</span> dossier_medical(id_dossier),
+  <span class="kw">FOREIGN KEY</span> (id_medecin) <span class="kw">REFERENCES</span> medecin(id_medecin)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       19. analyse (MODIFIÉ — id_medecin)
+  ══════════════════════════════════ -->
+  <div class="table-card" id="analyse">
+    <div class="table-header" style="background:#2d1a05">
+      <span class="table-icon">🔬</span>
+      <span class="table-name" style="color:#fdba74">analyse</span>
+      <span class="table-desc">نتائج التحاليل</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_analyse<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف التحليل</td></tr>
+        <tr><td class="col-name">id_dossier<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ dossier_medical</td></tr>
+        <tr><td class="col-name">id_medecin<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ medecin</td></tr>
+        <tr><td class="col-name">type_analyse</td><td class="col-type">VARCHAR(100)</td><td class="col-extra">NOT NULL</td><td class="col-desc">نوع التحليل</td></tr>
+        <tr><td class="col-name">laboratoire</td><td class="col-type">VARCHAR(100)</td><td class="col-extra"></td><td class="col-desc">اسم المختبر</td></tr>
+        <tr><td class="col-name">date_demande</td><td class="col-type">DATE</td><td class="col-extra">NOT NULL</td><td class="col-desc">تاريخ الطلب</td></tr>
+        <tr><td class="col-name">date_resultat</td><td class="col-type">DATE</td><td class="col-extra">NULL</td><td class="col-desc">تاريخ الحصول على النتيجة</td></tr>
+        <tr><td class="col-name">resultat</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">النتيجة</td></tr>
+        <tr><td class="col-name">interpretation</td><td class="col-type">TEXT</td><td class="col-extra"></td><td class="col-desc">التفسير الطبي</td></tr>
+        <tr><td class="col-name">fichier_url</td><td class="col-type">VARCHAR(500)</td><td class="col-extra"></td><td class="col-desc">ملف النتيجة PDF</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> analyse (
+  id_analyse     <span class="tp">INT</span>          <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_dossier     <span class="tp">INT</span>          <span class="kw">NOT NULL</span>,
+  id_medecin     <span class="tp">INT</span>          <span class="kw">NOT NULL</span>,
+  type_analyse   <span class="tp">VARCHAR(100)</span> <span class="kw">NOT NULL</span>,
+  laboratoire    <span class="tp">VARCHAR(100)</span>,
+  date_demande   <span class="tp">DATE</span>         <span class="kw">NOT NULL</span>,
+  date_resultat  <span class="tp">DATE</span>,
+  resultat       <span class="tp">TEXT</span>,
+  interpretation <span class="tp">TEXT</span>,
+  fichier_url    <span class="tp">VARCHAR(500)</span>,
+  <span class="kw">FOREIGN KEY</span> (id_dossier) <span class="kw">REFERENCES</span> dossier_medical(id_dossier),
+  <span class="kw">FOREIGN KEY</span> (id_medecin) <span class="kw">REFERENCES</span> medecin(id_medecin)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       20. facture
+  ══════════════════════════════════ -->
+  <div class="table-card" id="facture">
+    <div class="table-header" style="background:#3b0a0a">
+      <span class="table-icon">🧾</span>
+      <span class="table-name" style="color:#fca5a5">facture</span>
+      <span class="table-desc">الفواتير</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_facture<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الفاتورة</td></tr>
+        <tr><td class="col-name">id_patient<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ patient</td></tr>
+        <tr><td class="col-name">id_rdv<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NULL</td><td class="col-desc">→ rendez_vous</td></tr>
+        <tr><td class="col-name">numero_facture<span class="badge uk">UK</span></td><td class="col-type">VARCHAR(50)</td><td class="col-extra">NOT NULL</td><td class="col-desc">رقم الفاتورة (FAC-2024-001)</td></tr>
+        <tr><td class="col-name">date_emission</td><td class="col-type">DATE</td><td class="col-extra">NOT NULL</td><td class="col-desc">تاريخ الإصدار</td></tr>
+        <tr><td class="col-name">montant_total</td><td class="col-type">DECIMAL(10,2)</td><td class="col-extra">NOT NULL</td><td class="col-desc">المبلغ الإجمالي (يُسجَّل يدوياً)</td></tr>
+        <tr><td class="col-name">montant_paye</td><td class="col-type">DECIMAL(10,2)</td><td class="col-extra">DEFAULT 0</td><td class="col-desc">المبلغ المدفوع (يتراكم عبر paiement)</td></tr>
+        <tr><td class="col-name">statut</td><td class="col-type">ENUM</td><td class="col-extra">DEFAULT 'en attente'</td><td class="col-desc">en attente / partiellement payée / payée / annulée</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> facture (
+  id_facture     <span class="tp">INT</span>           <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_patient     <span class="tp">INT</span>           <span class="kw">NOT NULL</span>,
+  id_rdv         <span class="tp">INT</span>,
+  numero_facture <span class="tp">VARCHAR(50)</span>   <span class="kw">UNIQUE NOT NULL</span>,
+  date_emission  <span class="tp">DATE</span>          <span class="kw">NOT NULL</span>,
+  montant_total  <span class="tp">DECIMAL(10,2)</span> <span class="kw">NOT NULL</span>,
+  montant_paye   <span class="tp">DECIMAL(10,2)</span> <span class="kw">DEFAULT</span> <span class="nm">0.00</span>,
+  statut         <span class="tp">ENUM</span>(<span class="st">'en attente'</span>,<span class="st">'partiellement payée'</span>,
+                 <span class="st">'payée'</span>,<span class="st">'annulée'</span>) <span class="kw">DEFAULT</span> <span class="st">'en attente'</span>,
+  <span class="kw">FOREIGN KEY</span> (id_patient) <span class="kw">REFERENCES</span> patient(id_patient),
+  <span class="kw">FOREIGN KEY</span> (id_rdv)     <span class="kw">REFERENCES</span> rendez_vous(id_rdv)
+);</pre></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       21. paiement
+  ══════════════════════════════════ -->
+  <div class="table-card" id="paiement">
+    <div class="table-header" style="background:#3b0a0a">
+      <span class="table-icon">💳</span>
+      <span class="table-name" style="color:#f87171">paiement</span>
+      <span class="table-desc">سجل المدفوعات</span>
+    </div>
+    <table>
+      <thead><tr><th>العمود</th><th>النوع</th><th>قيود</th><th>الوصف</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id_paiement<span class="badge pk">PK</span></td><td class="col-type">INT</td><td class="col-extra">AUTO_INCREMENT</td><td class="col-desc">معرّف الدفعة</td></tr>
+        <tr><td class="col-name">id_facture<span class="badge fk">FK</span></td><td class="col-type">INT</td><td class="col-extra">NOT NULL</td><td class="col-desc">→ facture</td></tr>
+        <tr><td class="col-name">date_paiement</td><td class="col-type">DATE</td><td class="col-extra">NOT NULL</td><td class="col-desc">تاريخ الدفع</td></tr>
+        <tr><td class="col-name">montant</td><td class="col-type">DECIMAL(10,2)</td><td class="col-extra">NOT NULL</td><td class="col-desc">المبلغ المدفوع</td></tr>
+        <tr><td class="col-name">mode_paiement</td><td class="col-type">ENUM</td><td class="col-extra">NOT NULL</td><td class="col-desc">espèces / carte / virement / chèque</td></tr>
+        <tr><td class="col-name">reference</td><td class="col-type">VARCHAR(100)</td><td class="col-extra"></td><td class="col-desc">رقم المرجع (للبطاقة أو التحويل)</td></tr>
+      </tbody>
+    </table>
+    <div class="sql-block"><pre>
+<span class="kw">CREATE TABLE</span> paiement (
+  id_paiement   <span class="tp">INT</span>           <span class="kw">PRIMARY KEY AUTO_INCREMENT</span>,
+  id_facture    <span class="tp">INT</span>           <span class="kw">NOT NULL</span>,
+  date_paiement <span class="tp">DATE</span>          <span class="kw">NOT NULL</span>,
+  montant       <span class="tp">DECIMAL(10,2)</span> <span class="kw">NOT NULL</span>,
+  mode_paiement <span class="tp">ENUM</span>(<span class="st">'espèces'</span>,<span class="st">'carte'</span>,
+                 <span class="st">'virement'</span>,<span class="st">'chèque'</span>) <span class="kw">NOT NULL</span>,
+  reference     <span class="tp">VARCHAR(100)</span>,
+  <span class="kw">FOREIGN KEY</span> (id_facture) <span class="kw">REFERENCES</span> facture(id_facture)
+);</pre></div>
+  </div>
+
+</div><!-- fin grid -->
+
+<!-- ══════════════════════════════════════
+     RÉSUMÉ DES RELATIONS
+══════════════════════════════════════ -->
+<div class="relations">
+  <h2>🔗 العلاقات بين الجداول (Foreign Keys)</h2>
+  <div class="rel-grid">
+    <div class="rel-item"><span>ville</span>.id_region → <em>region</em>.id_region</div>
+    <div class="rel-item"><span>secteur</span>.id_ville → <em>ville</em>.id_ville</div>
+    <div class="rel-item"><span>etablissement</span>.id_type → <em>type_etablissement</em>.id_type</div>
+    <div class="rel-item"><span>etablissement</span>.id_secteur → <em>secteur</em>.id_secteur</div>
+    <div class="rel-item"><span>medecin</span>.id_etablissement → <em>etablissement</em>.id_etablissement</div>
+    <div class="rel-item"><span>medecin</span>.id_domaine → <em>domaine_medical</em>.id_domaine</div>
+    <div class="rel-item"><span>medecin</span>.id_utilisateur → <em>utilisateur</em>.id_utilisateur</div>
+    <div class="rel-item"><span>patient</span>.id_utilisateur → <em>utilisateur</em>.id_utilisateur</div>
+    <div class="rel-item"><span>receptionniste</span>.id_utilisateur → <em>utilisateur</em>.id_utilisateur</div>
+    <div class="rel-item"><span>disponibilite</span>.id_medecin → <em>medecin</em>.id_medecin</div>
+    <div class="rel-item"><span>dossier_medical</span>.id_patient → <em>patient</em>.id_patient</div>
+    <div class="rel-item"><span>rendez_vous</span>.id_patient → <em>patient</em>.id_patient</div>
+    <div class="rel-item"><span>rendez_vous</span>.id_medecin → <em>medecin</em>.id_medecin</div>
+    <div class="rel-item"><span>soin</span>.id_dossier → <em>dossier_medical</em>.id_dossier</div>
+    <div class="rel-item"><span>soin</span>.id_medecin → <em>medecin</em>.id_medecin</div>
+    <div class="rel-item"><span>soin</span>.id_rdv → <em>rendez_vous</em>.id_rdv</div>
+    <div class="rel-item"><span>note_clinique</span>.id_dossier → <em>dossier_medical</em>.id_dossier</div>
+    <div class="rel-item"><span>note_clinique</span>.id_medecin → <em>medecin</em>.id_medecin</div>
+    <div class="rel-item"><span>ordonnance</span>.id_dossier → <em>dossier_medical</em>.id_dossier</div>
+    <div class="rel-item"><span>ordonnance</span>.id_medecin → <em>medecin</em>.id_medecin</div>
+    <div class="rel-item"><span>medicament_ordonnance</span>.id_ordonnance → <em>ordonnance</em>.id_ordonnance</div>
+    <div class="rel-item"><span>radiographie</span>.id_dossier → <em>dossier_medical</em>.id_dossier</div>
+    <div class="rel-item"><span>radiographie</span>.id_medecin → <em>medecin</em>.id_medecin</div>
+    <div class="rel-item"><span>analyse</span>.id_dossier → <em>dossier_medical</em>.id_dossier</div>
+    <div class="rel-item"><span>analyse</span>.id_medecin → <em>medecin</em>.id_medecin</div>
+    <div class="rel-item"><span>facture</span>.id_patient → <em>patient</em>.id_patient</div>
+    <div class="rel-item"><span>facture</span>.id_rdv → <em>rendez_vous</em>.id_rdv</div>
+    <div class="rel-item"><span>paiement</span>.id_facture → <em>facture</em>.id_facture</div>
+  </div>
+</div>
+
+</body>
+</html>

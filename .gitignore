@@ -1,0 +1,16 @@
+# Maven
+APPSANTE/target/
+APPSANTE/.mvn/wrapper/maven-wrapper.jar
+
+# Node
+FRONTEND/node_modules/
+FRONTEND/dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
