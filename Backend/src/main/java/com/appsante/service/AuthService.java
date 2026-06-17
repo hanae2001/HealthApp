@@ -1,14 +1,15 @@
 package com.appsante.service;
 
+import com.appsante.dto.request.LoginRequest;
 import com.appsante.dto.request.RegisterRequest;
-import com.appsante.dto.response.RegisterResponse;
+import com.appsante.dto.response.AuthResponse;
 import com.appsante.entity.Patient;
 import com.appsante.entity.Utilisateur;
 import com.appsante.repository.PatientRepository;
 import com.appsante.repository.UtilisateurRepository;
+import com.appsante.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
-//"Cette classe est un service (logique métier)"   
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,24 +20,20 @@ public class AuthService {
     private final UtilisateurRepository utilisateurRepository;
     private final PatientRepository patientRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     @Transactional
-    public RegisterResponse inscrirePatient(RegisterRequest req) {
-
-        // ① Vérifier que l'email n'est pas déjà utilisé
+    public AuthResponse inscrirePatient(RegisterRequest req) {
         if (utilisateurRepository.existsByEmail(req.getEmail())) {
             throw new RuntimeException("Un compte avec cet email existe déjà");
         }
 
-        // ② Créer l'utilisateur avec le mot de passe encodé en BCrypt
         Utilisateur utilisateur = new Utilisateur();
         utilisateur.setEmail(req.getEmail());
         utilisateur.setMotDePasse(passwordEncoder.encode(req.getMotDePasse()));
         utilisateur.setRole(Utilisateur.Role.patient);
         utilisateur = utilisateurRepository.save(utilisateur);
-        // → INSERT INTO utilisateur (email, mot_de_passe, role, actif)
 
-        // ③ Créer le profil patient lié à cet utilisateur
         Patient patient = new Patient();
         patient.setUtilisateur(utilisateur);
         patient.setNom(req.getNom());
@@ -45,13 +42,26 @@ public class AuthService {
         patient.setTelephone(req.getTelephone());
         patient.setAdresse(req.getAdresse());
         patientRepository.save(patient);
-        // → INSERT INTO patient (id_utilisateur, nom, prenom, email, telephone, adresse)
-        // → Le trigger MySQL after_patient_insert crée automatiquement le dossier_medical
 
-        return new RegisterResponse(
-            utilisateur.getIdUtilisateur(),
-            utilisateur.getEmail(),
-            utilisateur.getRole().name()
-        );
+        String token = jwtUtil.generateToken(utilisateur.getEmail(), utilisateur.getRole().name());
+        return new AuthResponse(utilisateur.getIdUtilisateur(), utilisateur.getEmail(),
+                utilisateur.getRole().name(), token);
+    }
+
+    public AuthResponse connecter(LoginRequest req) {
+        Utilisateur utilisateur = utilisateurRepository.findByEmail(req.getEmail())
+                .orElseThrow(() -> new RuntimeException("Email ou mot de passe incorrect"));
+
+        if (!passwordEncoder.matches(req.getMotDePasse(), utilisateur.getMotDePasse())) {
+            throw new RuntimeException("Email ou mot de passe incorrect");
+        }
+
+        if (!utilisateur.getActif()) {
+            throw new RuntimeException("Ce compte est désactivé");
+        }
+
+        String token = jwtUtil.generateToken(utilisateur.getEmail(), utilisateur.getRole().name());
+        return new AuthResponse(utilisateur.getIdUtilisateur(), utilisateur.getEmail(),
+                utilisateur.getRole().name(), token);
     }
 }
