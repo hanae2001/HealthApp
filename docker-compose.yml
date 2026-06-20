@@ -2,6 +2,7 @@ services:
 
   db:
     image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
     ports:
@@ -10,19 +11,22 @@ services:
       - ./Architecture/database.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysql", "-u", "root", "-e", "SELECT 1 FROM app_dentaire.utilisateur LIMIT 1"]
       interval: 5s
       timeout: 10s
-      retries: 10
+      retries: 20
+      start_period: 30s
 
   backend:
     build: ./Backend
     ports:
       - "8081:8081"
+    restart: on-failure
     environment:
-      SPRING_DATASOURCE_URL: "jdbc:mysql://db:3306/app_dentaire?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://db:3306/app_dentaire?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&useUnicode=true"
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
     depends_on:
       db:
         condition: service_healthy

@@ -139,10 +139,12 @@ CREATE TABLE medecin (
 CREATE TABLE receptionniste (
   id_receptionniste INT         PRIMARY KEY AUTO_INCREMENT,
   id_utilisateur    INT         UNIQUE,
+  id_etablissement  INT         NOT NULL,
   nom               VARCHAR(50) NOT NULL,
   prenom            VARCHAR(50) NOT NULL,
   telephone         VARCHAR(20),
-  FOREIGN KEY (id_utilisateur) REFERENCES utilisateur(id_utilisateur)
+  FOREIGN KEY (id_utilisateur)   REFERENCES utilisateur(id_utilisateur),
+  FOREIGN KEY (id_etablissement) REFERENCES etablissement(id_etablissement)
 );
 
 -- ============================================================
@@ -397,8 +399,8 @@ INSERT INTO utilisateur (email, mot_de_passe, role) VALUES
 INSERT INTO medecin (id_utilisateur, id_etablissement, id_domaine, nom, prenom, numero_ordre) VALUES
   (2, 1, 1, 'Alaoui', 'Karim', 'ORD-2020-001');   -- id_medecin = 1
 
-INSERT INTO receptionniste (id_utilisateur, nom, prenom, telephone) VALUES
-  (3, 'Benali', 'Sara', '0661001122');
+INSERT INTO receptionniste (id_utilisateur, id_etablissement, nom, prenom, telephone) VALUES
+  (3, 1, 'Benali', 'Sara', '0661001122');   -- rattachée au Cabinet Dr. Alaoui
 
 INSERT INTO patient (id_utilisateur, nom, prenom, email, telephone, date_naissance) VALUES
   (4, 'El Mansouri', 'Youssef', 'patient.test@gmail.com', '0612345678', '1990-05-15');

@@ -75,58 +75,62 @@ Base package: `com.appsante`
 
 | Layer | Implemented |
 |-------|-------------|
-| Entities | `Utilisateur`, `Patient` |
-| Repositories | `UtilisateurRepository`, `PatientRepository` |
-| Services | `AuthService` |
-| Controllers | `AuthController`, `GlobalExceptionHandler` |
-| DTOs | `RegisterRequest`, `RegisterResponse`, `ErrorResponse` |
-| Security | `SecurityConfig` (BCrypt, CORS, stateless JWT-ready) |
+| Entities | `Utilisateur`, `Patient`, `Medecin`, `Receptionniste`, `Etablissement`, `DomaineMedical`, `Ville`, `Secteur` |
+| Repositories | All of the above |
+| Services | `AuthService`, `AdminService` |
+| Controllers | `AuthController`, `AdminController`, `PublicController`, `GlobalExceptionHandler` |
+| Security | `SecurityConfig`, `JwtUtil`, `JwtFilter`, `UserDetailsServiceImpl` |
+| DTOs | Register/Login/Auth, CreateMedecin/Receptionniste requests; Medecin/Receptionniste/Etablissement/Domaine/Ville/Secteur responses |
+| Config | `DataInitializer` — auto-creates `admin@appsante.ma` / `Admin1234` on first boot |
 
-**Only live endpoint:** `POST /api/auth/register` — creates `Utilisateur` + `Patient` in one transaction; DB trigger auto-creates `dossier_medical`.
+**Live endpoints:**
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/auth/register` | Public | Creates `Utilisateur` + `Patient`; DB trigger auto-creates `dossier_medical` |
+| `POST` | `/api/auth/login` | Public | Returns JWT + user info |
+| `GET` | `/api/public/domaines` | Public | List medical specialties |
+| `GET` | `/api/public/villes` | Public | List cities (sorted A–Z) |
+| `GET` | `/api/public/secteurs?idVille=` | Public | Sectors for a city |
+| `GET` | `/api/public/etablissements?idSecteur=` | Public | Establishments (optional filter) |
+| `POST` | `/api/admin/medecins` | ADMIN | Create medecin account |
+| `POST` | `/api/admin/receptionnistes` | ADMIN | Create receptionniste account |
+| `GET` | `/api/admin/medecins` | ADMIN | List all medecins |
+| `GET` | `/api/admin/receptionnistes` | ADMIN | List all receptionnistes |
+| `GET` | `/api/admin/villes` | ADMIN | List cities |
+| `GET` | `/api/admin/secteurs?idVille=` | ADMIN | Sectors for a city |
+| `GET` | `/api/admin/etablissements?idSecteur=` | ADMIN | Establishments |
+| `GET` | `/api/admin/domaines` | ADMIN | List specialties |
 
 **Not yet implemented:**
-- `security/` package: `JwtUtil`, `JwtFilter`, `UserDetailsServiceImpl`
-- `POST /api/auth/login` returning a JWT
-- 19 remaining entities and repositories
-- Services: `AdminService`, `RendezVousService`, `ConsultationService`, `FacturationService`, `MailService`
-- Controllers: `AdminController`, `RendezVousController`, `ConsultationController`, `FacturationController`
+- 13 remaining entities: `rendez_vous`, `disponibilite`, `dossier_medical`, `soin`, `note_clinique`, `ordonnance`, `medicament_ordonnance`, `radiographie`, `analyse`, `facture`, `paiement`, `region`, `type_etablissement`
+- Services: `RendezVousService`, `ConsultationService`, `FacturationService`, `MailService`
+- Controllers: `RendezVousController`, `ConsultationController`, `FacturationController`
 - `config/MailConfig`, `scheduler/RappelRdvJob`
 
-**`pom.xml` is missing these dependencies** (add before implementing JWT or email):
-```xml
-<dependency>
-  <groupId>io.jsonwebtoken</groupId>
-  <artifactId>jjwt-api</artifactId>
-  <version>0.12.6</version>
-</dependency>
-<dependency>
-  <groupId>io.jsonwebtoken</groupId>
-  <artifactId>jjwt-impl</artifactId>
-  <version>0.12.6</version>
-  <scope>runtime</scope>
-</dependency>
-<dependency>
-  <groupId>io.jsonwebtoken</groupId>
-  <artifactId>jjwt-jackson</artifactId>
-  <version>0.12.6</version>
-  <scope>runtime</scope>
-</dependency>
-<dependency>
-  <groupId>org.springframework.boot</groupId>
-  <artifactId>spring-boot-starter-mail</artifactId>
-</dependency>
-```
+## Security
+
+`SecurityConfig` uses `@EnableMethodSecurity` with `@PreAuthorize("hasRole('ADMIN')")` on `AdminController`. Role is stored as a JWT claim (`role`) and loaded by `UserDetailsServiceImpl` which prefixes it with `ROLE_` for Spring Security.
+
+Public routes: `/api/auth/**` and GET `/api/public/**`. Everything else requires a valid Bearer token.
+
+JWT secret and expiration live in `application.properties` (`jwt.secret`, `jwt.expiration=86400000`).
 
 ## Frontend
 
-Vue 3 + Vite SPA using hash history routing (`/#/register`, `/#/login`).
+Vue 3 + Vite SPA using hash history routing. Auth state lives in `localStorage` (`token`, `user`).
 
 | Route | Component | Notes |
 |-------|-----------|-------|
-| `/#/register` (default) | `RegisterView.vue` | Calls `POST http://localhost:8081/api/auth/register`; redirects to `/login` on success |
-| `/#/login` | `LoginView.vue` | UI ready; backend `/api/auth/login` not yet implemented |
+| `/#/` | → `/login` | Redirect |
+| `/#/register` | → `/login` | Redirect (register is a tab inside LoginView) |
+| `/#/login` | `LoginView.vue` | Combined login + patient register; toggle between Patient / Professionnel login types |
+| `/#/dashboard` | `DashboardView.vue` | Patient dashboard; requires auth + role=patient |
+| `/#/admin` | `AdminView.vue` | Admin panel; requires auth + role=admin |
 
-`HomeView.vue` exists but is **not registered in the router** — the root `/` redirects directly to `/register`.
+Router guard redirects authenticated users away from `/login` to their role-appropriate route (`/admin` or `/dashboard`), and redirects wrong-role access similarly.
+
+`AdminView.vue` is a single-file component with an embedded sidebar, multi-step wizard for creating medecin/receptionniste accounts, and data tables. The wizard calls `/api/public/**` (no auth) for dropdowns and `/api/admin/**` (Bearer token) for mutations.
 
 Shared CSS (animations, panel-left, form inputs, alerts) lives in `src/assets/main.css`. The `brand` Tailwind color is blue `#2563eb` (`brand-600`).
 
@@ -165,3 +169,4 @@ Shared CSS (animations, panel-left, form inputs, alerts) lives in `src/assets/ma
 - Only the `admin` role can create `medecin` and `receptionniste` accounts.
 - Patient communication is email only (`RappelRdvJob` / Spring Mail).
 - All entity relationships use `FetchType.LAZY` to prevent N+1 queries.
+- `PublicController` calls repositories directly (no service layer) — this is intentional for simple read-only geography/catalog lookups with no business logic.

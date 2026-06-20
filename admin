@@ -1,0 +1,5 @@
+admin@appsante.ma
+Admin1234
+
+
+docker-compose up -d db backend

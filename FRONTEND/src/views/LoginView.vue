@@ -38,14 +38,14 @@
       <div class="auth-form-wrap">
 
         <!-- Onglets -->
-        <div class="auth-tabs">
-          <button :class="['auth-tab', { active: mode === 'login' }]" @click="mode = 'login'">
+        <div class="auth-tabs" :class="{ 'tabs-single': loginType === 'pro' }">
+          <button :class="['auth-tab', { active: mode === 'login' || loginType === 'pro' }]" @click="mode = 'login'">
             Se connecter
           </button>
-          <button :class="['auth-tab', { active: mode === 'register' }]" @click="mode = 'register'">
+          <button v-if="loginType === 'patient'" :class="['auth-tab', { active: mode === 'register' }]" @click="mode = 'register'">
             Créer un compte
           </button>
-          <div class="auth-tab-indicator" :style="mode === 'register' ? 'left:50%' : 'left:0'"></div>
+          <div class="auth-tab-indicator" :style="loginType === 'pro' ? 'width:calc(100% - 10px);left:0' : mode === 'register' ? 'left:50%' : 'left:0'"></div>
         </div>
 
         <!-- Alert -->
@@ -58,9 +58,23 @@
         <!-- ══ CONNEXION ══ -->
         <Transition name="slide" mode="out-in">
         <div v-if="mode === 'login'" key="login">
+
+          <!-- Toggle Patient / Pro -->
+          <div class="login-type-toggle">
+            <button :class="['ltt-btn', { active: loginType === 'patient' }]" @click="loginType = 'patient'">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+              Patient
+            </button>
+            <button :class="['ltt-btn', { active: loginType === 'pro' }]" @click="loginType = 'pro'">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              Professionnel
+            </button>
+          </div>
+
           <div class="form-header">
             <h2>Bon retour 👋</h2>
-            <p>Connectez-vous à votre espace patient</p>
+            <p v-if="loginType === 'patient'">Connectez-vous à votre espace patient</p>
+            <p v-else style="color:#7c3aed">Accès Admin · Médecin · Réceptionniste</p>
           </div>
 
           <form @submit.prevent="handleLogin">
@@ -83,15 +97,19 @@
               </div>
             </div>
 
-            <button type="submit" class="btn-submit" :disabled="loadingLogin">
+            <button type="submit" class="btn-submit" :disabled="loadingLogin"
+              :style="loginType === 'pro' ? 'background:linear-gradient(135deg,#7c3aed,#6d28d9)' : ''">
               <svg v-if="loadingLogin" class="spin" width="18" height="18" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,.3)" stroke-width="3"/><path fill="#fff" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
               {{ loadingLogin ? 'Connexion…' : 'Se connecter' }}
             </button>
           </form>
 
-          <p class="auth-switch">
+          <p v-if="loginType === 'patient'" class="auth-switch">
             Pas de compte ?
             <button @click="mode = 'register'" class="auth-switch-btn">Créer un compte →</button>
+          </p>
+          <p v-else class="auth-switch" style="color:#94a3b8;font-size:12px;text-align:center">
+            Votre compte est créé par l'administrateur système
           </p>
         </div>
 
@@ -229,6 +247,7 @@ const router = useRouter()
 const API    = 'http://localhost:8081'
 
 const mode       = ref('login')
+const loginType  = ref('patient')
 const showPwd    = ref(false)
 const showPwd2   = ref(false)
 const alert      = ref({ show: false, type: '', message: '' })
@@ -250,7 +269,7 @@ async function handleLogin() {
     if (res.ok) {
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify({ id: data.id, email: data.email, role: data.role }))
-      router.push('/dashboard')
+      router.push(data.role === 'admin' ? '/admin' : '/dashboard')
     } else {
       alert.value = { show: true, type: 'error', message: data.message || 'Email ou mot de passe incorrect.' }
     }
@@ -399,7 +418,14 @@ const features = [
 .auth-tabs { position:relative; display:grid; grid-template-columns:1fr 1fr; background:#fff; border-radius:14px; padding:5px; margin-bottom:24px; box-shadow:0 1px 4px rgba(0,0,0,.06); border:1px solid #e2e8f0; }
 .auth-tab { padding:10px; border:none; background:transparent; font-size:14px; font-weight:600; color:#94a3b8; cursor:pointer; border-radius:10px; transition:color .2s; position:relative; z-index:1; }
 .auth-tab.active { color:#fff; }
-.auth-tab-indicator { position:absolute; top:5px; bottom:5px; width:calc(50% - 5px); background:linear-gradient(135deg,#2563eb,#1d4ed8); border-radius:10px; transition:left .25s cubic-bezier(.4,0,.2,1); box-shadow:0 4px 12px rgba(37,99,235,.3); }
+.auth-tab-indicator { position:absolute; top:5px; bottom:5px; width:calc(50% - 5px); background:linear-gradient(135deg,#2563eb,#1d4ed8); border-radius:10px; transition:all .25s cubic-bezier(.4,0,.2,1); box-shadow:0 4px 12px rgba(37,99,235,.3); }
+.tabs-single { grid-template-columns:1fr; }
+
+/* Login type toggle */
+.login-type-toggle { display:flex; background:#f1f5f9; border-radius:10px; padding:4px; margin-bottom:20px; gap:4px; }
+.ltt-btn { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:9px; border:none; background:transparent; font-size:13px; font-weight:600; color:#64748b; cursor:pointer; border-radius:7px; transition:all .2s; }
+.ltt-btn.active { background:#fff; color:#2563eb; box-shadow:0 1px 4px rgba(0,0,0,.1); }
+.ltt-btn:last-child.active { color:#7c3aed; }
 
 /* Alert */
 .auth-alert { display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; margin-bottom:16px; font-size:13px; font-weight:500; }
