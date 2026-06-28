@@ -14,3 +14,7 @@ FRONTEND/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Credentials (ne jamais committer)
+les counts
+Backend/target/

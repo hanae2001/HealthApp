@@ -22,7 +22,7 @@
       <nav class="sb-nav">
         <button v-for="item in navItems" :key="item.key"
           :class="['sb-item', { active: activeNav === item.key }]"
-          @click="activeNav = item.key; sidebarOpen = false; if(item.key === 'rdv') resetRdv()">
+          @click="activeNav = item.key; sidebarOpen = false; if(item.key === 'rdv') resetRdv(); if(item.key === 'dossier' && !dossier) fetchDossier()">
           <span class="sb-item-icon" v-html="item.icon"></span>
           <span class="sb-item-lbl">{{ item.label }}</span>
           <span v-if="item.key === 'mesrdv'" class="sb-count">{{ allRdv.length }}</span>
@@ -254,10 +254,10 @@
           <h3>Rendez-vous confirmé !</h3>
           <div class="confirmed-summary">
             <div class="cs-row"><span>Domaine</span><strong>{{ rdv.domaine?.label }}</strong></div>
-            <div class="cs-row"><span>Ville</span><strong>{{ rdv.ville?.name }}</strong></div>
-            <div class="cs-row"><span>Secteur</span><strong>{{ rdv.secteur?.name }}</strong></div>
-            <div class="cs-row"><span>Cabinet</span><strong>{{ rdv.cabinet?.name }}</strong></div>
-            <div class="cs-row"><span>Médecin</span><strong>Dr. {{ rdv.medecin?.name }}</strong></div>
+            <div class="cs-row"><span>Ville</span><strong>{{ rdv.ville?.nomVille }}</strong></div>
+            <div class="cs-row"><span>Secteur</span><strong>{{ rdv.secteur?.nomSecteur }}</strong></div>
+            <div class="cs-row"><span>Cabinet</span><strong>{{ rdv.cabinet?.nomEtablissement }}</strong></div>
+            <div class="cs-row"><span>Médecin</span><strong>Dr. {{ rdv.medecin?.prenom }} {{ rdv.medecin?.nom }}</strong></div>
             <div class="cs-row"><span>Date & heure</span><strong>{{ rdv.form.date }} à {{ rdv.form.heure }}</strong></div>
           </div>
           <button class="btn-primary" style="max-width:260px;margin:0 auto;" @click="activeNav = 'mesrdv'">Voir mes rendez-vous</button>
@@ -364,16 +364,17 @@
               </button>
             </div>
 
+            <div v-if="villesApi.length === 0" style="text-align:center;padding:40px;color:#94a3b8">Chargement des villes…</div>
             <div class="villes-grid">
-              <button v-for="v in filteredVilles" :key="v.key"
-                :class="['ville-card', { selected: rdv.ville?.key === v.key }]"
-                @click="rdv.ville = v; rdv.secteur = null; rdv.step = 3">
-                <span class="ville-flag">{{ v.flag }}</span>
-                <span class="ville-name">{{ v.name }}</span>
-                <span class="ville-count">{{ getSecteurs(v.key).length }} secteur{{ getSecteurs(v.key).length > 1 ? 's' : '' }}</span>
+              <button v-for="v in filteredVilles" :key="v.idVille"
+                :class="['ville-card', { selected: rdv.ville?.idVille === v.idVille }]"
+                @click="onVilleSelect(v)">
+                <span class="ville-flag">{{ getFlag(v.nomVille) }}</span>
+                <span class="ville-name">{{ v.nomVille }}</span>
+                <span class="ville-count">→ Secteurs</span>
               </button>
             </div>
-            <p v-if="filteredVilles.length === 0" class="empty-state">Aucune ville trouvée.</p>
+            <p v-if="villesApi.length > 0 && filteredVilles.length === 0" class="empty-state">Aucune ville trouvée.</p>
           </div>
 
           <!-- Step 3 — Secteur -->
@@ -381,32 +382,26 @@
             <div class="step-recap">
               <span class="recap-pill">{{ rdv.domaine?.emoji }} {{ rdv.domaine?.label }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">📍 {{ rdv.ville?.name }}</span>
+              <span class="recap-pill">📍 {{ rdv.ville?.nomVille }}</span>
             </div>
 
             <!-- Bandeau ville -->
             <div class="secteur-hero">
               <div class="secteur-hero-icon">🏙️</div>
               <div class="secteur-hero-text">
-                <h3>{{ rdv.ville?.name }}</h3>
-                <p>{{ getSecteurs(rdv.ville?.key).length }} quartiers · sélectionnez votre secteur</p>
+                <h3>{{ rdv.ville?.nomVille }}</h3>
+                <p>{{ secteursApi.length }} quartiers disponibles</p>
               </div>
-              <span class="secteur-hero-badge">
-                {{ getSecteurs(rdv.ville?.key).filter(s => getCabinets(rdv.ville?.key, s.key).length > 0).length }}
-                <small>actifs</small>
-              </span>
+              <span class="secteur-hero-badge">{{ secteursApi.length }}<small>secteurs</small></span>
             </div>
 
+            <div v-if="loadingStep" style="text-align:center;padding:30px;color:#94a3b8">Chargement…</div>
+
             <!-- Grille des secteurs -->
-            <div class="secteurs-grid">
-              <button
-                v-for="s in getSecteurs(rdv.ville?.key)" :key="s.key"
-                :class="['secteur-card', {
-                  selected:    rdv.secteur?.key === s.key,
-                  unavailable: getCabinets(rdv.ville?.key, s.key).length === 0
-                }]"
-                :disabled="getCabinets(rdv.ville?.key, s.key).length === 0"
-                @click="rdv.secteur = s; rdv.step = 4">
+            <div v-else class="secteurs-grid">
+              <button v-for="s in secteursApi" :key="s.idSecteur"
+                :class="['secteur-card', { selected: rdv.secteur?.idSecteur === s.idSecteur }]"
+                @click="onSecteurSelect(s)">
 
                 <div class="secteur-icon-wrap">
                   <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -416,19 +411,18 @@
                 </div>
 
                 <div class="secteur-body">
-                  <p class="secteur-name">{{ s.name }}</p>
-                  <p class="secteur-avail" v-if="getCabinets(rdv.ville?.key, s.key).length > 0">
-                    {{ getCabinets(rdv.ville?.key, s.key).length }}
-                    cabinet{{ getCabinets(rdv.ville?.key, s.key).length > 1 ? 's' : '' }} disponible{{ getCabinets(rdv.ville?.key, s.key).length > 1 ? 's' : '' }}
-                  </p>
-                  <p class="secteur-none" v-else>Aucun cabinet</p>
+                  <p class="secteur-name">{{ s.nomSecteur }}</p>
+                  <p class="secteur-avail">Voir les cabinets →</p>
                 </div>
 
-                <svg v-if="getCabinets(rdv.ville?.key, s.key).length > 0"
-                  class="secteur-chevron" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <svg class="secteur-chevron" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                 </svg>
               </button>
+
+              <div v-if="!loadingStep && secteursApi.length === 0" class="empty-state">
+                <p>Aucun secteur disponible dans cette ville.</p>
+              </div>
             </div>
 
             <div class="step-footer" style="margin-top:20px;">
@@ -441,28 +435,31 @@
             <div class="step-recap">
               <span class="recap-pill">{{ rdv.domaine?.emoji }} {{ rdv.domaine?.label }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">📍 {{ rdv.ville?.name }}</span>
+              <span class="recap-pill">📍 {{ rdv.ville?.nomVille }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">🏘️ {{ rdv.secteur?.name }}</span>
+              <span class="recap-pill">🏘️ {{ rdv.secteur?.nomSecteur }}</span>
             </div>
             <p class="step-hint">Choisissez un établissement</p>
-            <div class="cabinets-list">
-              <button v-for="c in getCabinets(rdv.ville?.key, rdv.secteur?.key)" :key="c.id"
-                :class="['cabinet-card', { selected: rdv.cabinet?.id === c.id }]"
-                @click="rdv.cabinet = c; rdv.step = 5">
+            <div v-if="loadingStep" style="text-align:center;padding:30px;color:#94a3b8">Chargement…</div>
+            <div v-else class="cabinets-list">
+              <button v-for="c in etabsApi" :key="c.idEtablissement"
+                :class="['cabinet-card', { selected: rdv.cabinet?.idEtablissement === c.idEtablissement }]"
+                @click="onCabinetSelect(c)">
                 <div class="cabinet-icon">
                   <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                 </div>
                 <div class="cabinet-info">
-                  <h5>{{ c.name }}</h5>
-                  <p><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>{{ c.adresse }}</p>
-                  <p><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>{{ c.telephone }}</p>
+                  <h5>{{ c.nomEtablissement }}</h5>
+                  <p v-if="c.adresse"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>{{ c.adresse }}</p>
+                  <p v-if="c.telephone"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>{{ c.telephone }}</p>
                 </div>
                 <div class="cabinet-arrow">
                   <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </div>
               </button>
-              <p v-if="getCabinets(rdv.ville?.key, rdv.secteur?.key).length === 0" class="empty-state">Aucun cabinet dans ce secteur.</p>
+              <div v-if="etabsApi.length === 0" class="empty-state">
+                <p>Aucun établissement dans ce secteur.</p>
+              </div>
             </div>
             <div class="step-footer">
               <button class="btn-back" @click="rdv.step = 3">← Retour</button>
@@ -474,34 +471,43 @@
             <div class="step-recap">
               <span class="recap-pill">{{ rdv.domaine?.emoji }} {{ rdv.domaine?.label }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">📍 {{ rdv.ville?.name }}</span>
+              <span class="recap-pill">📍 {{ rdv.ville?.nomVille }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">🏘️ {{ rdv.secteur?.name }}</span>
+              <span class="recap-pill">🏘️ {{ rdv.secteur?.nomSecteur }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">🏥 {{ rdv.cabinet?.name }}</span>
+              <span class="recap-pill">🏥 {{ rdv.cabinet?.nomEtablissement }}</span>
             </div>
             <p class="step-hint">Choisissez votre médecin</p>
-            <div class="medecins-list">
-              <button v-for="m in getMedecins(rdv.cabinet?.id)" :key="m.id"
-                :class="['medecin-card', { selected: rdv.medecin?.id === m.id }]"
-                @click="rdv.medecin = m">
-                <div class="medecin-avatar" :style="{ background: m.color }">{{ m.initials }}</div>
+            <div v-if="loadingStep" style="text-align:center;padding:30px;color:#94a3b8">Chargement…</div>
+            <div v-else class="medecins-list">
+              <button v-for="m in medecinsApi" :key="m.idMedecin"
+                :class="['medecin-card', { selected: rdv.medecin?.idMedecin === m.idMedecin }]"
+                @click="onMedecinSelect(m)">
+                <div class="medecin-avatar" :style="{ background: mColor(m.nom) }">{{ mInitials(m) }}</div>
                 <div class="medecin-info">
-                  <h5>Dr. {{ m.name }}</h5>
-                  <p class="medecin-spec">{{ m.spec }}</p>
+                  <h5>Dr. {{ m.prenom }} {{ m.nom }}</h5>
+                  <p class="medecin-spec">{{ m.nomDomaine }}</p>
                   <div class="medecin-meta">
                     <span>
                       <svg width="12" height="12" fill="#f59e0b" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
-                      {{ m.rating }}
+                      {{ m.noteMoyenne || '—' }}
                     </span>
-                    <span>{{ m.experience }} ans d'expérience</span>
-                    <span class="tarif-badge">{{ m.tarif }} DH</span>
+                    <span v-if="m.experienceAns">{{ m.experienceAns }} ans d'expérience</span>
+                    <span v-if="m.tarifConsultation" class="tarif-badge">{{ m.tarifConsultation }} DH</span>
                   </div>
                 </div>
-                <div v-if="rdv.medecin?.id === m.id" class="check-mark">
+                <div v-if="rdv.medecin?.idMedecin === m.idMedecin" class="check-mark">
                   <svg width="18" height="18" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 </div>
               </button>
+              <div v-if="medecinApiError" style="text-align:center;padding:30px;color:#dc2626;background:#fef2f2;border-radius:12px;margin:16px 0">
+                <p style="font-weight:700;margin:0 0 4px">{{ medecinApiError }}</p>
+                <p style="font-size:12px;color:#64748b;margin:0">Ouvrez la console (F12) pour plus de détails</p>
+              </div>
+              <div v-else-if="medecinsApi.length === 0" class="empty-state">
+                <p>Aucun médecin assigné à cet établissement.</p>
+                <p style="font-size:12px;color:#94a3b8;margin:4px 0 0">Créez un médecin via l'espace Admin et assignez-le à <strong>{{ rdv.cabinet?.nomEtablissement }}</strong>.</p>
+              </div>
             </div>
             <div class="step-footer">
               <button class="btn-back" @click="rdv.step = 4">← Retour</button>
@@ -516,13 +522,13 @@
             <div class="step-recap">
               <span class="recap-pill">{{ rdv.domaine?.emoji }} {{ rdv.domaine?.label }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">📍 {{ rdv.ville?.name }}</span>
+              <span class="recap-pill">📍 {{ rdv.ville?.nomVille }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">🏘️ {{ rdv.secteur?.name }}</span>
+              <span class="recap-pill">🏘️ {{ rdv.secteur?.nomSecteur }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">🏥 {{ rdv.cabinet?.name }}</span>
+              <span class="recap-pill">🏥 {{ rdv.cabinet?.nomEtablissement }}</span>
               <span class="recap-sep">›</span>
-              <span class="recap-pill">👨‍⚕️ Dr. {{ rdv.medecin?.name }}</span>
+              <span class="recap-pill">👨‍⚕️ Dr. {{ rdv.medecin?.prenom }} {{ rdv.medecin?.nom }}</span>
             </div>
 
             <div class="confirm-grid">
@@ -534,13 +540,18 @@
                 </h4>
                 <div class="date-strip">
                   <button v-for="d in bookingDates" :key="d.key"
-                    :class="['date-pill', { active: rdv.form.date === d.key }]"
-                    @click="rdv.form.date = d.key; rdv.form.heure = ''">
+                    :class="['date-pill', { active: rdv.form.date === d.key, disabled: d.disabled }]"
+                    :disabled="d.disabled"
+                    :title="d.disabled ? 'Médecin non disponible ce jour' : ''"
+                    @click="!d.disabled && (rdv.form.date = d.key, rdv.form.heure = '', rdv._selectedDateObj = d.dateObj)">
                     <span class="date-pill-day">{{ d.dayName }}</span>
                     <span class="date-pill-num">{{ d.dayNum }}</span>
                     <span class="date-pill-month">{{ d.month }}</span>
                   </button>
                 </div>
+                <p v-if="medecinDispos.length > 0" style="font-size:11px;color:#94a3b8;margin:4px 0 12px">
+                  Jours disponibles : <strong>{{ [...new Set(medecinDispos.map(d => d.jourSemaine))].join(', ') }}</strong>
+                </p>
 
                 <div v-if="rdv.form.date">
                   <div v-for="period in slotPeriods" :key="period.key">
@@ -568,13 +579,13 @@
 
                 <div class="booking-summary" v-if="rdv.form.date && rdv.form.heure">
                   <p class="summary-title">Récapitulatif</p>
-                  <div class="summary-row"><span>Médecin</span><strong>Dr. {{ rdv.medecin?.name }}</strong></div>
-                  <div class="summary-row"><span>Spécialité</span><strong>{{ rdv.domaine?.label }}</strong></div>
-                  <div class="summary-row"><span>Cabinet</span><strong>{{ rdv.cabinet?.name }}</strong></div>
-                  <div class="summary-row"><span>Ville</span><strong>{{ rdv.ville?.name }}</strong></div>
+                  <div class="summary-row"><span>Médecin</span><strong>Dr. {{ rdv.medecin?.prenom }} {{ rdv.medecin?.nom }}</strong></div>
+                  <div class="summary-row"><span>Spécialité</span><strong>{{ rdv.medecin?.nomDomaine || rdv.domaine?.label }}</strong></div>
+                  <div class="summary-row"><span>Cabinet</span><strong>{{ rdv.cabinet?.nomEtablissement }}</strong></div>
+                  <div class="summary-row"><span>Ville</span><strong>{{ rdv.ville?.nomVille }}</strong></div>
                   <div class="summary-row"><span>Date</span><strong>{{ rdv.form.date }}</strong></div>
                   <div class="summary-row"><span>Heure</span><strong>{{ rdv.form.heure }}</strong></div>
-                  <div class="summary-row"><span>Tarif</span><strong class="tarif-highlight">{{ rdv.medecin?.tarif }} DH</strong></div>
+                  <div class="summary-row"><span>Tarif</span><strong class="tarif-highlight">{{ rdv.medecin?.tarifConsultation }} DH</strong></div>
                 </div>
               </div>
             </div>
@@ -649,15 +660,79 @@
           </div>
           <span class="pill-green">● Actif</span>
         </div>
-        <div class="home-2col" style="margin-top:20px">
-          <div class="panel" v-for="section in dossierSections" :key="section.title">
-            <div class="panel-header">
-              <h4>{{ section.title }}</h4>
-              <span style="font-size:22px">{{ section.icon }}</span>
-            </div>
-            <p style="font-size:13px;color:#94a3b8;margin:0">{{ section.desc }}</p>
+
+        <div v-if="loadingDossier" style="text-align:center;padding:40px;color:#94a3b8">Chargement du dossier…</div>
+
+        <template v-else-if="dossier">
+          <!-- Onglets -->
+          <div style="display:flex;gap:4px;margin:20px 0 16px;border-bottom:2px solid #e2e8f0;padding-bottom:0">
+            <button v-for="t in dossierTabs" :key="t.key"
+              :class="['dos-tab', { active: dossierTab === t.key }]"
+              @click="dossierTab = t.key">
+              {{ t.icon }} {{ t.label }}
+              <span class="dos-tab-count">{{ t.count }}</span>
+            </button>
           </div>
-        </div>
+
+          <!-- Notes cliniques -->
+          <div v-if="dossierTab === 'notes'">
+            <div v-if="dossier.notes.length === 0" class="dos-empty">Aucune consultation enregistrée.</div>
+            <div v-for="n in dossier.notes" :key="n.idNote" class="dos-card">
+              <div class="dos-card-header">
+                <div>
+                  <span class="dos-doc">Dr. {{ n.prenomMedecin }} {{ n.nomMedecin }}</span>
+                  <span class="dos-spec">{{ n.nomDomaine }}</span>
+                </div>
+                <span class="dos-date">📅 {{ n.dateNote }}</span>
+              </div>
+              <div v-if="n.diagnostic" class="dos-field"><label>Diagnostic</label><p>{{ n.diagnostic }}</p></div>
+              <div v-if="n.planTraitement" class="dos-field"><label>Plan de traitement</label><p>{{ n.planTraitement }}</p></div>
+              <div v-if="n.observations" class="dos-field"><label>Observations</label><p>{{ n.observations }}</p></div>
+            </div>
+          </div>
+
+          <!-- Soins -->
+          <div v-else-if="dossierTab === 'soins'">
+            <div v-if="dossier.soins.length === 0" class="dos-empty">Aucun soin enregistré.</div>
+            <div style="display:grid;gap:10px">
+              <div v-for="s in dossier.soins" :key="s.idSoin" class="dos-soin-row">
+                <div style="width:36px;height:36px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">🩹</div>
+                <div style="flex:1;min-width:0">
+                  <p style="margin:0;font-weight:600;color:#1e293b;font-size:14px">{{ s.typeSoin }}</p>
+                  <p style="margin:2px 0 0;font-size:12px;color:#64748b">Dr. {{ s.prenomMedecin }} {{ s.nomMedecin }} · {{ s.dateSoin }}</p>
+                </div>
+                <div style="text-align:right;flex-shrink:0">
+                  <p style="margin:0;font-weight:700;color:#0891b2;font-size:15px">{{ s.cout }} DH</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ordonnances -->
+          <div v-else-if="dossierTab === 'ordonnances'">
+            <div v-if="dossier.ordonnances.length === 0" class="dos-empty">Aucune ordonnance enregistrée.</div>
+            <div v-for="o in dossier.ordonnances" :key="o.idOrdonnance" class="dos-card">
+              <div class="dos-card-header">
+                <div>
+                  <span class="dos-doc">Dr. {{ o.prenomMedecin }} {{ o.nomMedecin }}</span>
+                  <span style="font-size:11px;color:#64748b;margin-left:8px">Valable {{ o.validiteJours }} jours</span>
+                </div>
+                <span class="dos-date">💊 {{ o.dateEmission }}</span>
+              </div>
+              <div style="display:grid;gap:8px;margin-top:12px">
+                <div v-for="med in o.medicaments" :key="med.id" class="dos-med-row">
+                  <span class="dos-med-name">{{ med.nomMedicament }}</span>
+                  <span class="dos-med-info">{{ med.dosage }}</span>
+                  <span class="dos-med-info">{{ med.frequence }}</span>
+                  <span class="dos-med-info">{{ med.duree }}</span>
+                </div>
+              </div>
+              <p v-if="o.notes" style="margin:10px 0 0;font-size:12px;color:#64748b;font-style:italic">{{ o.notes }}</p>
+            </div>
+          </div>
+        </template>
+
+        <div v-else class="dos-empty" style="margin-top:40px">Dossier médical non disponible.</div>
       </div>
 
     </main>
@@ -665,7 +740,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -718,41 +793,186 @@ const stats = computed(() => {
 
 const avatarColors = ['#2563eb','#7c3aed','#0891b2','#be185d','#059669','#dc2626','#d97706','#0d9488']
 
-function confirmRdv() {
+async function confirmRdv() {
   const m = rdv.value.medecin
-  const name = m?.name || 'Médecin'
-  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)
-  const color = avatarColors[allRdv.value.length % avatarColors.length]
-  allRdv.value.unshift({
-    id:      Date.now(),
-    doctor:  name,
-    specialty: rdv.value.domaine?.label || '',
-    date:    rdv.value.form.date,
-    time:    rdv.value.form.heure,
-    lieu:    `${rdv.value.cabinet?.name || ''}, ${rdv.value.ville?.name || ''}`,
-    status:  'planned',
-    statusLabel: 'Planifié',
-    initials,
-    color,
-  })
-  rdv.value.confirmed = true
+  const token = localStorage.getItem('token')
+
+  const dateObj = rdv.value._selectedDateObj
+  let dateHeureStr = ''
+  if (dateObj) {
+    const y  = dateObj.getFullYear()
+    const mo = String(dateObj.getMonth() + 1).padStart(2, '0')
+    const d  = String(dateObj.getDate()).padStart(2, '0')
+    dateHeureStr = `${y}-${mo}-${d}T${rdv.value.form.heure}`
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/patient/rdv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ idMedecin: m?.idMedecin, dateHeure: dateHeureStr, motif: rdv.value.form.motif || '' })
+    })
+    if (!res.ok) {
+      const msg = await res.text()
+      alert('Erreur: ' + msg)
+      return
+    }
+    const saved = await res.json()
+    allRdv.value.unshift({
+      id:          saved.idRdv,
+      doctor:      `${m?.prenom || ''} ${m?.nom || ''}`.trim(),
+      specialty:   m?.nomDomaine || '',
+      date:        saved.dateHeure,
+      time:        rdv.value.form.heure,
+      lieu:        `${rdv.value.cabinet?.nomEtablissement || ''}, ${rdv.value.ville?.nomVille || ''}`,
+      status:      'planned',
+      statusLabel: 'Planifié',
+      initials:    mInitials(m),
+      color:       mColor(m?.nom || ''),
+    })
+    rdv.value.confirmed = true
+  } catch (e) {
+    console.error(e)
+    alert('Impossible de contacter le serveur')
+  }
 }
 
-const dossierSections = [
-  { title:'Consultations',  icon:'🩺', desc:'Vos consultations médicales seront enregistrées ici par votre médecin.' },
-  { title:'Ordonnances',    icon:'💊', desc:'Retrouvez toutes vos prescriptions médicales et médicaments.' },
-  { title:'Radiographies',  icon:'📡', desc:'Imagerie médicale : radios, IRM, scanners et résultats.' },
-  { title:'Analyses',       icon:'🔬', desc:'Résultats d\'analyses biologiques et bilans de santé.' },
-  { title:'Soins',          icon:'🩹', desc:'Historique des soins et traitements effectués.' },
-  { title:'Notes cliniques',icon:'📋', desc:'Notes et observations laissées par vos médecins.' },
-]
+// ── Dossier médical ──────────────────────────────────────────
+const dossier       = ref(null)
+const loadingDossier = ref(false)
+const dossierTab    = ref('notes')
+
+const dossierTabs = computed(() => [
+  { key: 'notes',       label: 'Consultations', icon: '🩺', count: dossier.value?.notes?.length || 0 },
+  { key: 'soins',       label: 'Soins',         icon: '🩹', count: dossier.value?.soins?.length || 0 },
+  { key: 'ordonnances', label: 'Ordonnances',   icon: '💊', count: dossier.value?.ordonnances?.length || 0 },
+])
+
+async function fetchDossier() {
+  loadingDossier.value = true
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_BASE}/api/patient/dossier`,
+      { headers: { Authorization: `Bearer ${token}` } })
+    if (res.ok) dossier.value = await res.json()
+  } catch(e) { console.error('Erreur dossier', e) }
+  finally { loadingDossier.value = false }
+}
 
 // ── Wizard RDV ───────────────────────────────────────────────
+const API_BASE = `http://${window.location.hostname}:8081`
+
 const rdv = ref({ step: 1, domaine: null, ville: null, secteur: null, cabinet: null, medecin: null, form: { date: '', heure: '', motif: '' }, confirmed: false })
+
+// API-loaded wizard data
+const villesApi   = ref([])
+const secteursApi = ref([])
+const etabsApi    = ref([])
+const medecinsApi = ref([])
+const loadingStep = ref(false)
 
 function resetRdv() {
   rdv.value = { step: 1, domaine: null, ville: null, secteur: null, cabinet: null, medecin: null, form: { date: '', heure: '', motif: '' }, confirmed: false }
+  secteursApi.value = []; etabsApi.value = []; medecinsApi.value = []
+  loadingStep.value = false
 }
+
+// ── Helpers médecin carte ────────────────────────────────────
+const _mColors = ['#2563eb','#7c3aed','#0891b2','#be185d','#059669','#dc2626','#d97706','#0d9488','#16a34a','#9333ea']
+function mColor(nom) {
+  const sum = [...(nom||'')].reduce((a,c) => a + c.charCodeAt(0), 0)
+  return _mColors[sum % _mColors.length]
+}
+function mInitials(m) {
+  return ((m?.prenom||'')[0]||'?').toUpperCase() + ((m?.nom||'')[0]||'').toUpperCase()
+}
+
+// ── Wizard API handlers ──────────────────────────────────────
+async function onVilleSelect(v) {
+  rdv.value.ville = v
+  rdv.value.secteur = null; rdv.value.cabinet = null; rdv.value.medecin = null
+  secteursApi.value = []; etabsApi.value = []; medecinsApi.value = []
+  loadingStep.value = true
+  try {
+    const res = await fetch(`${API_BASE}/api/public/secteurs?idVille=${v.idVille}`)
+    secteursApi.value = await res.json()
+  } catch(e) { secteursApi.value = [] }
+  finally { loadingStep.value = false; rdv.value.step = 3 }
+}
+
+async function onSecteurSelect(s) {
+  rdv.value.secteur = s
+  rdv.value.cabinet = null; rdv.value.medecin = null
+  etabsApi.value = []; medecinsApi.value = []
+  loadingStep.value = true
+  try {
+    const res = await fetch(`${API_BASE}/api/public/etablissements?idSecteur=${s.idSecteur}`)
+    etabsApi.value = await res.json()
+  } catch(e) { etabsApi.value = [] }
+  finally { loadingStep.value = false; rdv.value.step = 4 }
+}
+
+const medecinApiError = ref('')
+async function onCabinetSelect(c) {
+  rdv.value.cabinet = c
+  rdv.value.medecin = null
+  medecinsApi.value = []
+  medecinApiError.value = ''
+  loadingStep.value = true
+  try {
+    const res = await fetch(`${API_BASE}/api/public/medecins?idEtablissement=${c.idEtablissement}`)
+    if (res.ok) {
+      medecinsApi.value = await res.json()
+      console.log(`[RDV] Médecins pour établissement ${c.idEtablissement}:`, medecinsApi.value)
+    } else {
+      medecinApiError.value = `Erreur API ${res.status} — redémarrez le backend`
+      console.error('[RDV] Endpoint /api/public/medecins non disponible, status:', res.status)
+    }
+  } catch(e) {
+    medecinApiError.value = 'Impossible de contacter le serveur'
+    console.error('[RDV] Erreur réseau:', e)
+  }
+  finally { loadingStep.value = false; rdv.value.step = 5 }
+}
+
+// ── Flags villes ─────────────────────────────────────────────
+const FLAG_MAP = {
+  'Casablanca':'🏙️','Mohammedia':'🏭','Settat':'🌾','Berrechid':'🏘️','El Jadida':'🏰',
+  'Rabat':'🏛️','Salé':'🕍','Témara':'🌆','Kénitra':'🌿','Sidi Kacem':'🌵',
+  'Fès':'🏺','Meknès':'🦁','Taza':'⛰️','Ifrane':'❄️','Khénifra':'🏔️',
+  'Tanger':'⚓','Tétouan':'🌊','Al Hoceïma':'🏔️','Chefchaouen':'💙','Larache':'🌅',
+  'Oujda':'🌟','Nador':'🐟','Marrakech':'🌴','Agadir':'🌊','Essaouira':'🌬️',
+  'Béni Mellal':'🏔️','Khouribga':'⛏️','Errachidia':'🏜️','Ouarzazate':'🎬',
+  'Laâyoune':'🌅','Dakhla':'🏄','Guelmim':'🐪',
+}
+function getFlag(nomVille) { return FLAG_MAP[nomVille] || '📍' }
+
+onMounted(async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const [villesRes, rdvsRes] = await Promise.all([
+      fetch(`${API_BASE}/api/public/villes`),
+      fetch(`${API_BASE}/api/patient/rdv`, { headers: { Authorization: `Bearer ${token}` } }),
+    ])
+    villesApi.value = villesRes.ok ? await villesRes.json() : []
+    if (rdvsRes.ok) {
+      const data = await rdvsRes.json()
+      allRdv.value = data.map(r => ({
+        id: r.idRdv,
+        doctor: `${r.prenomMedecin || ''} ${r.nomMedecin || ''}`.trim(),
+        specialty: r.nomDomaine || '',
+        date: r.dateHeure?.split(' ')[0] || '',
+        time: r.dateHeure?.split(' ')[1] || '',
+        lieu: '',
+        status: r.statut === 'confirme' ? 'planned' : r.statut === 'termine' ? 'done' : r.statut === 'annule' ? 'cancelled' : 'planned',
+        statusLabel: { planifie:'Planifié', confirme:'Confirmé', annule:'Annulé', termine:'Terminé', refuse:'Refusé', reporte:'Reporté' }[r.statut] || r.statut,
+        initials: mInitials({ prenom: r.prenomMedecin, nom: r.nomMedecin }),
+        color: mColor(r.nomMedecin || ''),
+      }))
+    }
+    fetchDossier()
+  } catch(e) { console.error('Erreur chargement initial', e) }
+})
 
 const wizardSteps = [
   { key: 'domaine',  label: 'Domaine',  icon: '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>' },
@@ -1112,15 +1332,20 @@ function catBg(cat)    { return (catColors[cat] || catColors['Médecine généra
 const villeSearch   = ref('')
 const regionFilter  = ref('Toutes')
 
+function getRegion(nomVille) {
+  const found = villes.find(v => v.name === nomVille)
+  return found?.region || 'Autres'
+}
+
 const regions = computed(() => {
-  const set = new Set(villes.map(v => v.region))
+  const set = new Set(villesApi.value.map(v => getRegion(v.nomVille)))
   return ['Toutes', ...set]
 })
 
 const filteredVilles = computed(() => {
-  return villes.filter(v => {
-    const matchRegion = regionFilter.value === 'Toutes' || v.region === regionFilter.value
-    const matchSearch = !villeSearch.value || v.name.toLowerCase().includes(villeSearch.value.toLowerCase())
+  return villesApi.value.filter(v => {
+    const matchRegion = regionFilter.value === 'Toutes' || getRegion(v.nomVille) === regionFilter.value
+    const matchSearch = !villeSearch.value || v.nomVille.toLowerCase().includes(villeSearch.value.toLowerCase())
     return matchRegion && matchSearch
   })
 })
@@ -1171,32 +1396,85 @@ function getMedecins(cabinetId) {
   }))
 }
 
+// ── Disponibilités médecin sélectionné ───────────────────────
+const medecinDispos = ref([])
+
+async function onMedecinSelect(m) {
+  rdv.value.medecin = m
+  rdv.value.form.date = ''
+  rdv.value.form.heure = ''
+  medecinDispos.value = []
+  try {
+    const res = await fetch(`${API_BASE}/api/public/disponibilites?idMedecin=${m.idMedecin}`)
+    if (res.ok) medecinDispos.value = await res.json()
+  } catch(e) {}
+}
+
 // ── Date / créneaux ──────────────────────────────────────────
 const slotPeriods = [
   { key: 'morning',   label: 'Matin',      emoji: '🌅' },
   { key: 'afternoon', label: 'Après-midi', emoji: '☀️' },
   { key: 'evening',   label: 'Soir',       emoji: '🌇' },
 ]
-const allSlots = {
-  morning:   ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30'],
-  afternoon: ['12:00','13:00','14:00','14:30','15:00','15:30','16:00'],
-  evening:   ['16:30','17:00','17:30','18:00','18:30'],
-}
 
-function getSlots(period) {
-  const seed = (rdv.value.medecin?.id || 1) + (rdv.value.form.date?.charCodeAt(0) || 0)
-  return allSlots[period].map((time, i) => ({ time, taken: (seed + i * 3) % 7 === 0 }))
-}
+const FR_DAYS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi']
 
 const bookingDates = computed(() => {
   const days   = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam']
   const months = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']
   const now = new Date()
-  return Array.from({ length: 7 }, (_, i) => {
+  const availableDays = new Set(medecinDispos.value.map(d => d.jourSemaine))
+  return Array.from({ length: 14 }, (_, i) => {
     const d = new Date(now); d.setDate(now.getDate() + i)
-    return { key: `${d.getDate()} ${months[d.getMonth()]}`, dayName: days[d.getDay()], dayNum: d.getDate(), month: months[d.getMonth()] }
+    const frDay = FR_DAYS[d.getDay()]
+    return {
+      key: `${d.getDate()} ${months[d.getMonth()]}`,
+      dayName: days[d.getDay()],
+      dayNum: d.getDate(),
+      month: months[d.getMonth()],
+      frDay,
+      dateObj: new Date(d),
+      disabled: medecinDispos.value.length > 0 && !availableDays.has(frDay)
+    }
   })
 })
+
+function getSlots(period) {
+  const periodBounds = {
+    morning:   ['08:00', '12:00'],
+    afternoon: ['12:00', '16:30'],
+    evening:   ['16:30', '23:00'],
+  }
+  const [pStart, pEnd] = periodBounds[period]
+
+  // Utiliser les vraies disponibilités du médecin si disponibles
+  if (medecinDispos.value.length > 0 && rdv.value.form.date) {
+    const selectedDay = bookingDates.value.find(d => d.key === rdv.value.form.date)
+    if (!selectedDay) return []
+    const dayDispos = medecinDispos.value.filter(d => d.jourSemaine === selectedDay.frDay)
+    const slots = []
+    for (const dispo of dayDispos) {
+      const start = dispo.heureDebut > pStart ? dispo.heureDebut : pStart
+      const end   = dispo.heureFin   < pEnd   ? dispo.heureFin   : pEnd
+      if (start >= end) continue
+      let [h, m] = start.split(':').map(Number)
+      const [eH, eM] = end.split(':').map(Number)
+      while (h * 60 + m < eH * 60 + eM) {
+        slots.push({ time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, taken: false })
+        m += 30; if (m >= 60) { m -= 60; h++ }
+      }
+    }
+    return slots
+  }
+
+  // Fallback si pas de disponibilités configurées
+  const allSlots = {
+    morning:   ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30'],
+    afternoon: ['12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00'],
+    evening:   ['16:30','17:00','17:30','18:00','18:30'],
+  }
+  return allSlots[period].map(time => ({ time, taken: false }))
+}
 </script>
 
 <style scoped>
@@ -1569,8 +1847,9 @@ const bookingDates = computed(() => {
 .date-strip { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
 .date-strip::-webkit-scrollbar { display:none; }
 .date-pill { display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 14px; border-radius:14px; border:1.5px solid #e2e8f0; background:#fff; cursor:pointer; min-width:60px; transition:all .2s; }
-.date-pill:hover { border-color:#93c5fd; }
+.date-pill:hover:not(.disabled) { border-color:#93c5fd; }
 .date-pill.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+.date-pill.disabled { opacity:.35; cursor:not-allowed; background:#f8fafc; }
 .date-pill-day   { font-size:10px; font-weight:600; opacity:.7; }
 .date-pill-num   { font-size:18px; font-weight:800; line-height:1; }
 .date-pill-month { font-size:10px; font-weight:500; opacity:.7; }
@@ -1629,4 +1908,28 @@ const bookingDates = computed(() => {
 .btn-primary { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px 24px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; transition:opacity .2s; }
 .btn-primary:hover:not(:disabled) { opacity:.9; }
 .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+
+/* ── Dossier médical ── */
+.dos-tab { padding:8px 16px;border:none;background:none;border-bottom:3px solid transparent;font-size:13px;font-weight:500;color:#64748b;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;margin-bottom:-2px; }
+.dos-tab:hover { color:#1e293b; }
+.dos-tab.active { color:#2563eb;border-bottom-color:#2563eb;font-weight:700; }
+.dos-tab-count { background:#f1f5f9;color:#64748b;border-radius:20px;padding:0 7px;font-size:11px;font-weight:600; }
+.dos-tab.active .dos-tab-count { background:#dbeafe;color:#2563eb; }
+
+.dos-empty { text-align:center;padding:48px;color:#94a3b8;font-size:14px;background:#f8fafc;border-radius:12px;margin-top:16px; }
+
+.dos-card { background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:18px 20px;margin-bottom:12px; }
+.dos-card-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+.dos-doc { font-weight:700;color:#1e293b;font-size:14px; }
+.dos-spec { background:#eff6ff;color:#2563eb;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;margin-left:8px; }
+.dos-date { font-size:12px;color:#64748b;white-space:nowrap; }
+.dos-field { margin-bottom:10px; }
+.dos-field label { font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px; }
+.dos-field p { margin:0;font-size:13px;color:#334155;line-height:1.5; }
+
+.dos-soin-row { display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px; }
+
+.dos-med-row { display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-radius:8px;flex-wrap:wrap; }
+.dos-med-name { font-weight:700;color:#1e293b;font-size:13px;flex:1;min-width:120px; }
+.dos-med-info { font-size:12px;color:#64748b;background:#e2e8f0;border-radius:20px;padding:2px 8px; }
 </style>

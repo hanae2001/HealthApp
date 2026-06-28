@@ -267,9 +267,10 @@ async function handleLogin() {
     })
     const data = await res.json()
     if (res.ok) {
+      const ROLE_HOME = { admin: '/admin', patient: '/dashboard', medecin: '/medecin', receptionniste: '/receptionniste' }
       localStorage.setItem('token', data.token)
-      localStorage.setItem('user', JSON.stringify({ id: data.id, email: data.email, role: data.role }))
-      router.push(data.role === 'admin' ? '/admin' : '/dashboard')
+      localStorage.setItem('user', JSON.stringify({ id: data.id, email: data.email, role: data.role, nom: data.nom, prenom: data.prenom }))
+      router.push(ROLE_HOME[data.role] || '/dashboard')
     } else {
       alert.value = { show: true, type: 'error', message: data.message || 'Email ou mot de passe incorrect.' }
     }

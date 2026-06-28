@@ -113,11 +113,14 @@ public class DataInitializer implements CommandLineRunner {
             {"Dakhla", 12}
         };
 
+        Set<String> existingVilles = new HashSet<>();
+        villeRepository.findAll().forEach(v -> existingVilles.add(v.getNomVille()));
+
         List<Ville> toInsert = new ArrayList<>();
         for (Object[] entry : cities) {
             String nom = (String) entry[0];
             Integer idRegion = (Integer) entry[1];
-            if (!villeRepository.existsByNomVille(nom)) {
+            if (!existingVilles.contains(nom)) {
                 Ville v = new Ville();
                 v.setNomVille(nom);
                 v.setIdRegion(idRegion);
@@ -203,6 +206,9 @@ public class DataInitializer implements CommandLineRunner {
         secteurMap.put("Boujdour",         new String[]{"Centre-ville","Hay Al Amal"});
         secteurMap.put("Dakhla",           new String[]{"Centre-ville","Hay Jadid","Quartier Lagune"});
 
+        Set<String> existingSecteurs = new HashSet<>();
+        secteurRepository.findAll().forEach(s -> existingSecteurs.add(s.getNomSecteur() + "|" + s.getIdVille()));
+
         List<Secteur> toInsert = new ArrayList<>();
         int skipped = 0;
 
@@ -214,7 +220,7 @@ public class DataInitializer implements CommandLineRunner {
                 continue;
             }
             for (String nomSecteur : entry.getValue()) {
-                if (!secteurRepository.existsByNomSecteurAndIdVille(nomSecteur, idVille)) {
+                if (!existingSecteurs.contains(nomSecteur + "|" + idVille)) {
                     Secteur s = new Secteur();
                     s.setNomSecteur(nomSecteur);
                     s.setIdVille(idVille);

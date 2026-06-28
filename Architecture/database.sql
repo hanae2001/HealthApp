@@ -3,6 +3,7 @@
 --  21 tables | Généralisation multi-spécialités
 -- ============================================================
 
+SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 DROP DATABASE IF EXISTS app_dentaire;
 CREATE DATABASE app_dentaire CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -195,7 +196,7 @@ CREATE TABLE rendez_vous (
   date_heure  DATETIME     NOT NULL,
   duree       INT          DEFAULT 30,
   motif       VARCHAR(255),
-  statut      ENUM('planifié','confirmé','annulé','terminé') DEFAULT 'planifié',
+  statut      VARCHAR(20) NOT NULL DEFAULT 'planifie',
   notes       TEXT,
   created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

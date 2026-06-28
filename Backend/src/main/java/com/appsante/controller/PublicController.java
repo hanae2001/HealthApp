@@ -1,20 +1,26 @@
 package com.appsante.controller;
 
+import com.appsante.dto.response.DisponibiliteResponse;
 import com.appsante.dto.response.DomaineResponse;
 import com.appsante.dto.response.EtablissementResponse;
+import com.appsante.dto.response.PublicMedecinResponse;
 import com.appsante.dto.response.SecteurResponse;
 import com.appsante.dto.response.VilleResponse;
 import com.appsante.entity.Etablissement;
 import com.appsante.entity.Secteur;
 import com.appsante.entity.Ville;
+import com.appsante.repository.DisponibiliteRepository;
 import com.appsante.repository.DomaineMedicalRepository;
 import com.appsante.repository.EtablissementRepository;
+import com.appsante.repository.MedecinRepository;
 import com.appsante.repository.SecteurRepository;
 import com.appsante.repository.VilleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.format.DateTimeFormatter;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +35,10 @@ public class PublicController {
     private final VilleRepository villeRepository;
     private final SecteurRepository secteurRepository;
     private final EtablissementRepository etablissementRepository;
+    private final MedecinRepository medecinRepository;
+    private final DisponibiliteRepository disponibiliteRepository;
+
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
     @GetMapping("/domaines")
     public ResponseEntity<List<DomaineResponse>> listerDomaines() {
@@ -77,6 +87,36 @@ public class PublicController {
                             s != null ? s.getNomSecteur() : null,
                             v != null ? v.getNomVille()    : null);
                 })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/medecins")
+    public ResponseEntity<List<PublicMedecinResponse>> listerMedecins(
+            @RequestParam Integer idEtablissement) {
+        List<PublicMedecinResponse> result = medecinRepository
+                .findWithDetailsByEtablissement(idEtablissement)
+                .stream()
+                .filter(m -> !Boolean.FALSE.equals(m.getActif()))
+                .map(m -> new PublicMedecinResponse(
+                        m.getIdMedecin(), m.getNom(), m.getPrenom(),
+                        m.getDomaine() != null ? m.getDomaine().getNomDomaine() : null,
+                        m.getExperienceAns(), m.getNoteMoyenne(), m.getNbAvis(),
+                        m.getTarifConsultation()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/disponibilites")
+    public ResponseEntity<List<DisponibiliteResponse>> getDisponibilites(
+            @RequestParam Integer idMedecin) {
+        List<DisponibiliteResponse> result = disponibiliteRepository
+                .findByIdMedecinOrderByJourSemaineAscHeureDebutAsc(idMedecin)
+                .stream()
+                .map(d -> new DisponibiliteResponse(
+                        d.getIdDispo(), d.getJourSemaine(),
+                        d.getHeureDebut().format(TIME_FMT),
+                        d.getHeureFin().format(TIME_FMT)))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(result);
     }

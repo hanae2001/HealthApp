@@ -646,8 +646,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router     = useRouter()
-const API        = 'http://localhost:8081/api/admin'
-const PUBLIC_API = 'http://localhost:8081/api/public'
+const BASE       = `http://${window.location.hostname}:8081`
+const API        = `${BASE}/api/admin`
+const PUBLIC_API = `${BASE}/api/public`
 const token      = localStorage.getItem('token')
 const user       = JSON.parse(localStorage.getItem('user') || '{}')
 
