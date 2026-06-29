@@ -131,19 +131,16 @@ public class MedecinController {
 
     @GetMapping("/patients")
     public ResponseEntity<List<Map<String, Object>>> getPatients(Authentication auth) {
-        Medecin m = medecinRepository.findWithDetailsByEmail(auth.getName())
+        medecinRepository.findWithDetailsByEmail(auth.getName())
                 .orElseThrow(() -> new RuntimeException("Profil introuvable"));
-        List<Integer> patientIds = rendezVousRepository
-                .findByIdMedecinOrderByDateHeureAsc(m.getIdMedecin())
-                .stream().map(RendezVous::getIdPatient).distinct().collect(Collectors.toList());
-        List<Patient> patients = patientRepository.findAllById(patientIds);
-        List<Map<String, Object>> result = patients.stream().map(p -> Map.<String, Object>of(
-                "idPatient", p.getIdPatient(),
-                "nom", p.getNom() != null ? p.getNom() : "",
-                "prenom", p.getPrenom() != null ? p.getPrenom() : "",
-                "telephone", p.getTelephone() != null ? p.getTelephone() : "",
-                "groupeSanguin", p.getGroupeSanguin() != null ? p.getGroupeSanguin() : ""
-        )).collect(Collectors.toList());
+        List<Map<String, Object>> result = patientRepository.findAll().stream()
+                .map(p -> Map.<String, Object>of(
+                        "idPatient", p.getIdPatient(),
+                        "nom", p.getNom() != null ? p.getNom() : "",
+                        "prenom", p.getPrenom() != null ? p.getPrenom() : "",
+                        "telephone", p.getTelephone() != null ? p.getTelephone() : "",
+                        "groupeSanguin", p.getGroupeSanguin() != null ? p.getGroupeSanguin() : ""
+                )).collect(Collectors.toList());
         return ResponseEntity.ok(result);
     }
 
