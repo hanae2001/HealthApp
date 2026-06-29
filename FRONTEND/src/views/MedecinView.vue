@@ -783,8 +783,12 @@ async function saveNote() {
     if (res.ok) {
       patientDossier.value.notes.unshift(await res.json())
       addModal.value.show = false; dossTab.value = 'notes'
+    } else {
+      const msg = await res.text().catch(() => res.status)
+      alert('Erreur ' + res.status + ' : ' + msg)
     }
-  } finally { addModal.value.saving = false }
+  } catch(e) { alert('Erreur réseau : ' + e.message) }
+  finally { addModal.value.saving = false }
 }
 
 async function saveSoin() {
@@ -793,13 +797,17 @@ async function saveSoin() {
   try {
     const res = await fetch(`${API}/patient/${selectedPatient.value.idPatient}/soins`, {
       method: 'POST', headers: hdrs(),
-      body: JSON.stringify({ typeSoin: addModal.value.typeSoin, dateSoin: addModal.value.dateSoin, cout: addModal.value.cout || 0 })
+      body: JSON.stringify({ typeSoin: addModal.value.typeSoin, dateSoin: addModal.value.dateSoin, cout: Number(addModal.value.cout) || 0 })
     })
     if (res.ok) {
       patientDossier.value.soins.unshift(await res.json())
       addModal.value.show = false; dossTab.value = 'soins'
+    } else {
+      const msg = await res.text().catch(() => res.status)
+      alert('Erreur ' + res.status + ' : ' + msg)
     }
-  } finally { addModal.value.saving = false }
+  } catch(e) { alert('Erreur réseau : ' + e.message) }
+  finally { addModal.value.saving = false }
 }
 
 async function saveOrdonnance() {
@@ -814,8 +822,12 @@ async function saveOrdonnance() {
     if (res.ok) {
       patientDossier.value.ordonnances.unshift(await res.json())
       addModal.value.show = false; dossTab.value = 'ordonnances'
+    } else {
+      const msg = await res.text().catch(() => res.status)
+      alert('Erreur ' + res.status + ' : ' + msg)
     }
-  } finally { addModal.value.saving = false }
+  } catch(e) { alert('Erreur réseau : ' + e.message) }
+  finally { addModal.value.saving = false }
 }
 
 const DOMAIN_EMOJI = {
