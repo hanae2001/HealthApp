@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface NoteCliniqueRepository extends JpaRepository<NoteClinique, Integer> {
     List<NoteClinique> findByIdDossierOrderByDateNoteDesc(Integer idDossier);
+    void deleteByIdMedecin(Integer idMedecin);
 }

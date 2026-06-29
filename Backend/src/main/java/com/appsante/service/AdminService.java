@@ -27,6 +27,11 @@ public class AdminService {
     private final VilleRepository villeRepository;
     private final SecteurRepository secteurRepository;
     private final DisponibiliteRepository disponibiliteRepository;
+    private final RendezVousRepository rendezVousRepository;
+    private final NoteCliniqueRepository noteCliniqueRepository;
+    private final SoinRepository soinRepository;
+    private final OrdonnanceRepository ordonnanceRepository;
+    private final MedicamentOrdonnanceRepository medicamentOrdonnanceRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -174,6 +179,17 @@ public class AdminService {
         Medecin medecin = medecinRepository.findById(idMedecin)
                 .orElseThrow(() -> new RuntimeException("Médecin introuvable"));
         Utilisateur utilisateur = medecin.getUtilisateur();
+
+        // Supprimer les médicaments des ordonnances du médecin
+        List<Integer> ordIds = ordonnanceRepository.findByIdMedecin(idMedecin)
+                .stream().map(o -> o.getIdOrdonnance()).collect(Collectors.toList());
+        if (!ordIds.isEmpty()) {
+            medicamentOrdonnanceRepository.deleteByIdOrdonnanceIn(ordIds);
+        }
+        ordonnanceRepository.deleteByIdMedecin(idMedecin);
+        noteCliniqueRepository.deleteByIdMedecin(idMedecin);
+        soinRepository.deleteByIdMedecin(idMedecin);
+        rendezVousRepository.deleteByIdMedecin(idMedecin);
         disponibiliteRepository.deleteByIdMedecin(idMedecin);
         medecinRepository.delete(medecin);
         utilisateurRepository.delete(utilisateur);

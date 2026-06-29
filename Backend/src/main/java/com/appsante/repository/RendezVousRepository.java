@@ -18,8 +18,10 @@ public interface RendezVousRepository extends JpaRepository<RendezVous, Integer>
 
     boolean existsByIdMedecinAndDateHeure(Integer idMedecin, LocalDateTime dateHeure);
 
-    @Query("SELECT COUNT(r) FROM RendezVous r WHERE r.idMedecin = :idMedecin AND r.statut = 'planifié' AND r.dateHeure >= :from AND r.dateHeure < :to")
+    @Query("SELECT COUNT(r) FROM RendezVous r WHERE r.idMedecin = :idMedecin AND r.statut = 'planifie' AND r.dateHeure >= :from AND r.dateHeure < :to")
     long countPlanifiesByMedecinAndPeriod(@Param("idMedecin") Integer idMedecin,
                                           @Param("from") LocalDateTime from,
                                           @Param("to") LocalDateTime to);
+
+    void deleteByIdMedecin(Integer idMedecin);
 }

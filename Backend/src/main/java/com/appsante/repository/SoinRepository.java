@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface SoinRepository extends JpaRepository<Soin, Integer> {
     List<Soin> findByIdDossierOrderByDateSoinDesc(Integer idDossier);
+    void deleteByIdMedecin(Integer idMedecin);
 }

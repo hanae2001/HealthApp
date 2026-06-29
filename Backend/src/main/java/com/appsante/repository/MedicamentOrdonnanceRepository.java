@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface MedicamentOrdonnanceRepository extends JpaRepository<MedicamentOrdonnance, Integer> {
     List<MedicamentOrdonnance> findByIdOrdonnance(Integer idOrdonnance);
+    void deleteByIdOrdonnanceIn(List<Integer> idOrdonnances);
 }
